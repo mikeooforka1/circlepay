@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import AnimatedBackground from "../components/AnimatedBackground.jsx";
 import Ticker from "../components/Ticker.jsx";
 
@@ -8,67 +9,75 @@ const ArrowRight = (props) => (
 
 const categories = [
   {
-    sector: "Banking",
+    sector: "Mobile Data",
     companies: [
-      { name: "Zenith Bank Plc", symbol: "ZENITHBANK" },
-      { name: "Guaranty Trust Holding Company", symbol: "GTCO" },
-      { name: "Access Holdings Plc", symbol: "ACCESSCORP" },
-      { name: "United Bank for Africa", symbol: "UBA" },
+      { name: "MTN Data", symbol: "MTN" },
+      { name: "Airtel Data", symbol: "AIRTEL" },
+      { name: "Glo Data", symbol: "GLO" },
+      { name: "9mobile Data", symbol: "9MOBILE" },
     ],
-    desc: "Stable stocks with consistent dividend history.",
+    desc: "Affordable and fast mobile data bundles for all networks.",
   },
   {
-    sector: "Industrial Goods / Cement",
+    sector: "Airtime Top-up",
     companies: [
-      { name: "Dangote Cement Plc", symbol: "DANGCEM" },
-      { name: "BUA Cement Plc", symbol: "BUACEMENT" },
-      { name: "Lafarge Africa Plc", symbol: "WAPCO" },
+      { name: "MTN Airtime", symbol: "MTN" },
+      { name: "Airtel Airtime", symbol: "AIRTEL" },
+      { name: "Glo Airtime", symbol: "GLO" },
+      { name: "9mobile Airtime", symbol: "9MOBILE" },
     ],
-    desc: "Dominant players in construction and infrastructure.",
+    desc: "Instant airtime recharge for all major Nigerian networks.",
   },
   {
-    sector: "Consumer Goods",
+    sector: "Banking Services",
     companies: [
-      { name: "Nigerian Breweries Plc", symbol: "NB" },
-      { name: "Guinness Nigeria Plc", symbol: "GUINNESS" },
-      { name: "Cadbury Nigeria Plc", symbol: "CADBURY" },
-      { name: "Dangote Sugar Refinery Plc", symbol: "DANGSUGAR" },
+      { name: "Fund Wallet", symbol: "WALLET" },
+      { name: "Transfer Money", symbol: "TRANSFER" },
+      { name: "Pay Bills", symbol: "BILLS" },
     ],
-    desc: "Producers of everyday items with large market reach.",
+    desc: "Seamless wallet funding, transfers, and bill payments.",
   },
   {
-    sector: "Telecommunications",
+    sector: "Utility Payments",
     companies: [
-      { name: "MTN Nigeria Communications Plc", symbol: "MTNN" },
-      { name: "Airtel Africa Plc", symbol: "AIRTELAFRI" },
+      { name: "Electricity Bills", symbol: "ELECTRICITY" },
+      { name: "Cable TV", symbol: "CABLE" },
+      { name: "Internet Services", symbol: "INTERNET" },
     ],
-    desc: "High-cap companies driven by Nigeria's mobile/data usage.",
+    desc: "Pay for electricity, TV, and internet with ease.",
   },
   {
-    sector: "Oil and Gas",
+    sector: "Rewards & Bonuses",
     companies: [
-      { name: "Seplat Energy Plc", symbol: "SEPLAT" },
-      { name: "Conoil Plc", symbol: "CONOIL" },
-      { name: "Aradel Holdings Plc", symbol: "ARADEL" },
+      { name: "Cashback Offers", symbol: "CASHBACK" },
+      { name: "Referral Bonus", symbol: "REFERRAL" },
     ],
-    desc: "Exploration, production, and distribution of petroleum.",
+    desc: "Enjoy bonuses and rewards on every transaction.",
   },
   {
-    sector: "Others",
+    sector: "Customer Support",
     companies: [
-      { name: "Transcorp Hotels Plc", symbol: "TRANSCOHOT" },
-      { name: "NAHCO Plc", symbol: "NAHCO" },
-      { name: "Custodian Investment Plc", symbol: "CUSTODIAN" },
+      { name: "24/7 Support", symbol: "SUPPORT" },
+      { name: "Live Chat", symbol: "CHAT" },
     ],
-    desc: "Hospitality, aviation services, and insurance.",
+    desc: "Get help anytime with our dedicated support team.",
   },
 ];
 
 export default function Home() {
   const navigate = useNavigate();
+  const isAuthenticated = !!localStorage.getItem("token");
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    } else {
+      navigate("/login");
+    }
+  };
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+    <main className="relative min-h-screen bg-black text-yellow-400 pt-16">
       <AnimatedBackground />
 
       {/* Hero Section */}
@@ -76,33 +85,34 @@ export default function Home() {
         {/* Left: Text & Actions */}
         <div className="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left">
           <div className="mb-6">
-            <span className="inline-block bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-300 bg-clip-text text-transparent text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
+            <span className="inline-block bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-300 bg-clip-text text-transparent text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
               CirclePay
             </span>
-            <h1 className="mt-2 text-slate-800 text-2xl sm:text-3xl md:text-4xl font-bold">
-              Invest in Nigeria’s Leading Stocks
+            <h1 className="mt-2 text-yellow-400 text-2xl sm:text-3xl md:text-4xl font-bold">
+              Buy Data, Airtime & Pay Bills Instantly
             </h1>
           </div>
-          <p className="mt-2 text-slate-600 text-base sm:text-lg max-w-md">
-            Discover a new way to grow your wealth. Invest in top Nigerian stocks across banking, telecoms, consumer goods, oil & gas, and more. Experience transparency, speed, and a seamless journey.
+          <p className="mt-2 text-yellow-200 text-base sm:text-lg max-w-md">
+            Experience seamless banking. Instantly buy mobile data, recharge airtime, pay bills, and manage your wallet—all in one place. Fast, secure, and reliable for everyone.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-            <Link
-              to="/login"
-              className="group inline-flex items-center justify-center rounded-xl px-6 py-3 w-full sm:w-auto text-white font-semibold bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-400 shadow-lg hover:shadow-xl transition-shadow text-center"
+            <button
+              type="button"
+              onClick={handleGetStarted}
+              className="group inline-flex items-center justify-center rounded-xl px-6 py-3 w-full sm:w-auto text-black font-semibold bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-300 shadow-lg hover:shadow-xl transition-shadow text-center"
             >
-              Start Investing
+              Get Started
               <ArrowRight className="ml-2 transition-transform group-hover:translate-x-1" size={18} />
-            </Link>
+            </button>
             <Link
               to="/about"
-              className="inline-flex items-center justify-center rounded-xl px-6 py-3 w-full sm:w-auto border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 text-center"
+              className="inline-flex items-center justify-center rounded-xl px-6 py-3 w-full sm:w-auto border border-yellow-400 bg-black hover:bg-yellow-900 text-yellow-400 text-center"
             >
               Learn more
             </Link>
           </div>
           <div className="mt-10 w-full">
-            <div className="rounded-2xl border border-blue-100 bg-white/90 backdrop-blur-xl shadow-md">
+            <div className="rounded-2xl border border-yellow-400 bg-black/90 backdrop-blur-xl shadow-md">
               <Ticker />
             </div>
           </div>
@@ -110,29 +120,29 @@ export default function Home() {
         {/* Right: Illustration & Features */}
         <div className="w-full md:w-1/2 flex flex-col items-center justify-center relative">
           <div className="relative w-full max-w-xs mx-auto">
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-blue-200/40 via-cyan-200/40 to-fuchsia-200/40 blur-2xl pointer-events-none" />
-            <div className="relative rounded-3xl border border-blue-100 bg-white p-6 shadow-lg">
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-yellow-400/40 via-yellow-500/40 to-yellow-300/40 blur-2xl pointer-events-none" />
+            <div className="relative rounded-3xl border border-yellow-400 bg-black p-6 shadow-lg">
               <img
                 src="/assets/images/site-logo.png"
                 alt="CirclePay Logo"
                 className="mx-auto w-24 h-24 rounded-full shadow-lg mb-4"
               />
               <div className="grid grid-cols-2 gap-4 mt-2">
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 shadow flex flex-col items-center">
-                  <span className="text-blue-700 text-xs font-semibold">Diversity</span>
-                  <span className="mt-1 text-sm font-bold text-slate-800 text-center">Multiple sectors</span>
+                <div className="rounded-xl border border-yellow-400 bg-yellow-900 p-3 shadow flex flex-col items-center">
+                  <span className="text-yellow-400 text-xs font-semibold">Instant Delivery</span>
+                  <span className="mt-1 text-sm font-bold text-yellow-200 text-center">Fast transactions</span>
                 </div>
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 shadow flex flex-col items-center">
-                  <span className="text-blue-700 text-xs font-semibold">Stability</span>
-                  <span className="mt-1 text-sm font-bold text-slate-800 text-center">Consistent dividends</span>
+                <div className="rounded-xl border border-yellow-400 bg-yellow-900 p-3 shadow flex flex-col items-center">
+                  <span className="text-yellow-400 text-xs font-semibold">All Networks</span>
+                  <span className="mt-1 text-sm font-bold text-yellow-200 text-center">MTN, Airtel, Glo, 9mobile</span>
                 </div>
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 shadow flex flex-col items-center">
-                  <span className="text-blue-700 text-xs font-semibold">Growth</span>
-                  <span className="mt-1 text-sm font-bold text-slate-800 text-center">Market leaders</span>
+                <div className="rounded-xl border border-yellow-400 bg-yellow-900 p-3 shadow flex flex-col items-center">
+                  <span className="text-yellow-400 text-xs font-semibold">Secure Payments</span>
+                  <span className="mt-1 text-sm font-bold text-yellow-200 text-center">Bank-level security</span>
                 </div>
-                <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 shadow flex flex-col items-center">
-                  <span className="text-blue-700 text-xs font-semibold">Access</span>
-                  <span className="mt-1 text-sm font-bold text-slate-800 text-center">Easy investing</span>
+                <div className="rounded-xl border border-yellow-400 bg-yellow-900 p-3 shadow flex flex-col items-center">
+                  <span className="text-yellow-400 text-xs font-semibold">24/7 Support</span>
+                  <span className="mt-1 text-sm font-bold text-yellow-200 text-center">Always available</span>
                 </div>
               </div>
             </div>
@@ -140,26 +150,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Sectors Section */}
+      {/* Services Section */}
       <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-16">
         <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-blue-700 text-center sm:text-left w-full sm:w-auto">Popular Sectors & Stocks</h2>
-          <Link to="/sectors" className="text-sm text-blue-500 hover:text-blue-700 text-center sm:text-right w-full sm:w-auto">View all</Link>
+          <h2 className="text-xl sm:text-2xl font-bold text-yellow-400 text-center sm:text-left w-full sm:w-auto">Our Services</h2>
+          <Link to="/sectors" className="text-sm text-yellow-400 hover:text-yellow-300 text-center sm:text-right w-full sm:w-auto">View all</Link>
         </div>
         <div className="mt-8 grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((cat) => (
-            <div key={cat.sector} className="group rounded-2xl border border-blue-100 bg-white p-6 transition-transform hover:-translate-y-1 hover:bg-blue-50 flex flex-col h-full shadow">
+            <div key={cat.sector} className="group rounded-2xl border border-yellow-400 bg-black p-6 transition-transform hover:-translate-y-1 hover:bg-yellow-900 flex flex-col h-full shadow">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-base sm:text-lg font-semibold text-blue-800">{cat.sector}</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-yellow-400">{cat.sector}</h3>
               </div>
-              <p className="mb-3 text-blue-600 text-sm flex-1">{cat.desc}</p>
-              <div className="mb-2 flex flex-col gap-1 text-xs text-blue-500 font-semibold">
+              <p className="mb-3 text-yellow-200 text-sm flex-1">{cat.desc}</p>
+              <div className="mb-2 flex flex-col gap-1 text-xs text-yellow-400 font-semibold">
                 {cat.companies.map((c) => (
-                  <span key={c.symbol}>{c.name} <span className="text-slate-400">({c.symbol})</span></span>
+                  <span key={c.symbol}>{c.name} <span className="text-yellow-700">({c.symbol})</span></span>
                 ))}
               </div>
               <button
-                className="mt-auto inline-flex items-center text-blue-500 hover:text-blue-700 text-sm font-semibold"
+                className="mt-auto inline-flex items-center text-yellow-400 hover:text-yellow-300 text-sm font-semibold"
                 onClick={() => navigate("/sectors")}
               >
                 Explore <ArrowRight size={16} className="ml-1" />
@@ -182,13 +192,13 @@ export default function Home() {
             padding-top: 4.5rem !important;
           }
           .pb-10 {
-            padding-bottom: 1.5rem !important;
+            padding-bottom: 2.5rem !important;
           }
           .mt-16 {
             margin-top: 4.5rem !important;
           }
           .mt-8 {
-            margin-top: 2.5rem !important;
+            margin-top: 3.5rem !important;
           }
         }
       `}</style>

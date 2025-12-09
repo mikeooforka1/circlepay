@@ -78,22 +78,26 @@ export default function Payment() {
   };
 
   return (
-    <main className="min-h-screen pt-24 flex justify-center items-start bg-gradient-to-br from-blue-50 via-white to-blue-100 px-2">
-      <div className="w-full max-w-lg bg-white rounded-3xl p-8 sm:p-12 shadow-2xl border border-blue-100 relative overflow-hidden">
+    <main className="min-h-screen pt-24 flex justify-center items-start bg-black text-yellow-400 px-2">
+      <div className="w-full max-w-lg bg-black rounded-3xl p-8 sm:p-12 shadow-2xl border border-yellow-400 relative overflow-hidden">
         {/* Decorative background */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none"></div>
-        <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-400 rounded-t-3xl opacity-70"></div>
+        <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-400/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-yellow-400/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-300 rounded-t-3xl opacity-70"></div>
         <div className="flex flex-col items-center mb-8">
-          <img src="/assets/images/site-logo.png" alt="CirclePay Logo" className="w-16 h-16 rounded-full shadow-lg mb-2" />
-          <h2 className="text-3xl font-extrabold text-blue-700 mb-1 text-center">Add Funds</h2>
-          <p className="text-slate-600 text-center text-base">
+          <img src="/assets/images/site-logo.png" alt="CirclePay Logo" className="w-16 h-16 rounded-full shadow-lg mb-2 border-2 border-yellow-400" />
+          <h2 className="text-3xl font-extrabold text-yellow-400 mb-1 text-center">Add Funds</h2>
+          <p className="text-yellow-200 text-center text-base">
             Fund your CirclePay account securely using Paystack.
           </p>
         </div>
+        <div className="mb-4 text-center">
+          <span className="text-yellow-300 text-sm">Account Number:</span>
+          <span className="ml-2 text-yellow-400 font-bold tracking-widest">{user?.phone}</span>
+        </div>
         <form onSubmit={handlePaystack} className="flex flex-col gap-5">
           <div>
-            <label className="text-blue-700 font-medium" htmlFor="amount">
+            <label className="text-yellow-400 font-medium" htmlFor="amount">
               Amount (₦)
             </label>
             <input
@@ -101,18 +105,18 @@ export default function Payment() {
               type="number"
               min={MIN_DEPOSIT_NGN}
               step="0.01"
-              className="rounded-xl px-3 py-2 border border-blue-200 w-full bg-blue-50 text-blue-700"
+              className="rounded-xl px-3 py-2 border border-yellow-400 w-full bg-yellow-900 text-yellow-400"
               placeholder={`Enter amount (min ₦${MIN_DEPOSIT_NGN.toLocaleString(undefined, { maximumFractionDigits: 2 })})`}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               disabled={loading}
               required
             />
-            <div className="text-xs text-blue-500 mb-2 text-center">
+            <div className="text-xs text-yellow-300 mb-2 text-center">
               {amount && !isNaN(amount) && Number(amount) > 0 ? (
                 <>
-                  You are depositing <span className="font-semibold text-blue-700">₦{Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                  <span className="ml-2 text-cyan-500 font-semibold">
+                  You are depositing <span className="font-semibold text-yellow-400">₦{Number(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="ml-2 text-yellow-300 font-semibold">
                     ({formatDollar(Number(amount))})
                   </span>
                 </>
@@ -121,7 +125,7 @@ export default function Payment() {
           </div>
           <button
             type="submit"
-            className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-400 hover:from-cyan-500 hover:to-yellow-500 text-slate-900 font-semibold text-lg shadow transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="mt-4 px-4 py-2 rounded-xl bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-300 hover:from-yellow-500 hover:to-yellow-400 text-black font-semibold text-lg shadow transition disabled:opacity-60 disabled:cursor-not-allowed"
             disabled={
               loading ||
               !amount ||
@@ -131,9 +135,9 @@ export default function Payment() {
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5 text-cyan-400" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" stroke="#0891b2" strokeWidth="4" fill="none" />
-                  <path d="M12 2a10 10 0 0 1 10 10" stroke="#fbbf24" strokeWidth="4" fill="none" />
+                <svg className="animate-spin h-5 w-5 text-yellow-400" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" stroke="#FFD700" strokeWidth="4" fill="none" />
+                  <path d="M12 2a10 10 0 0 1 10 10" stroke="#FFD700" strokeWidth="4" fill="none" />
                 </svg>
                 Processing...
               </span>
@@ -142,23 +146,23 @@ export default function Payment() {
             )}
           </button>
         </form>
-        <div className="mt-8 text-center text-blue-700 text-sm">
+        <div className="mt-8 text-center text-yellow-400 text-sm">
           <div>
             <span className="font-semibold">Minimum deposit: ₦{MIN_DEPOSIT_NGN.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-            <span className="ml-2 text-cyan-500 font-semibold">({formatDollar(MIN_DEPOSIT_NGN)})</span>
+            <span className="ml-2 text-yellow-300 font-semibold">({formatDollar(MIN_DEPOSIT_NGN)})</span>
           </div>
           <div className="mt-2">
             <span className="inline-flex items-center gap-2">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" className="inline-block">
-                <circle cx="12" cy="12" r="10" stroke="#fbbf24" strokeWidth="2" fill="#0891b2" fillOpacity="0.2"/>
-                <path d="M12 7v5l3 3" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="10" stroke="#FFD700" strokeWidth="2" fill="#FFD700" fillOpacity="0.08"/>
+                <path d="M12 7v5l3 3" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               Payments are processed securely via Paystack. Your wallet will be credited instantly after confirmation.
             </span>
           </div>
         </div>
-        <div className="mt-6 text-center text-xs text-slate-400">
-          Powered by <span className="font-bold text-blue-700">CirclePay</span>
+        <div className="mt-6 text-center text-xs text-yellow-700">
+          Powered by <span className="font-bold text-yellow-400">CirclePay</span>
         </div>
       </div>
       <style>{`

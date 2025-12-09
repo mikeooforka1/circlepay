@@ -135,6 +135,7 @@ const Register = () => {
       age: data.age,
       dob: data.dob,
       gender: data.gender,
+      referralCode: data.referralCode || undefined, // <-- Add this line
     };
 
     for (const [key, value] of Object.entries(payload)) {
@@ -152,7 +153,7 @@ const Register = () => {
       const response = await registerUser(payload);
       localStorage.setItem("token", response.token);
       setAuthUser(response.user);
-      navigate('/dashboard');
+      navigate('/facial-recognition');
     } catch (error) {
       setError('root', {
         type: 'manual',
@@ -347,7 +348,7 @@ const Register = () => {
               >
                 <option value="" disabled>Code</option>
                 {countries.map(c => (
-                  <option key={c.code} value={c.code}>
+                  <option key={c.code + c.name} value={c.code}>
                     {c.code}
                   </option>
                 ))}
@@ -433,6 +434,21 @@ const Register = () => {
               <span className="error-message">{errors.gender.message}</span>
             )}
           </div>
+          <div className="circlepay-form-group">
+            <label>
+              Referral Code <span className="text-info">(optional)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Enter referral code (if any)"
+              {...register('referralCode')}
+              className={errors.referralCode ? 'input-error' : ''}
+              maxLength={6}
+            />
+            {errors.referralCode && (
+              <span className="error-message">{errors.referralCode.message}</span>
+            )}
+          </div>
           <div className="circlepay-form-group terms-group">
             <label className="terms-label">
               <input
@@ -487,19 +503,19 @@ const Register = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(120deg, #e0f2fe 0%, #f8fafc 100%);
+          background: linear-gradient(120deg, #000 0%, #222 100%);
           padding: 2rem 0;
         }
         .circlepay-register-card {
-          background: #fff;
+          background: #111;
           border-radius: 20px;
-          box-shadow: 0 8px 32px rgba(56,189,248,0.13);
+          box-shadow: 0 8px 32px rgba(212,175,55,0.13);
           padding: 2.5rem 2rem 2rem 2rem;
           max-width: 440px;
           width: 100%;
           margin: 0 auto;
           position: relative;
-          border: 1px solid #bae6fd;
+          border: 1px solid #FFD700;
         }
         .circlepay-register-logo {
           display: flex;
@@ -510,20 +526,20 @@ const Register = () => {
           width: 64px;
           height: 64px;
           border-radius: 16px;
-          background: #38bdf8;
+          background: #FFD700;
           object-fit: cover;
-          box-shadow: 0 2px 12px rgba(56,189,248,0.18);
+          box-shadow: 0 2px 12px rgba(212,175,55,0.18);
         }
         .circlepay-register-title {
           text-align: center;
-          color: #0ea5e9;
+          color: #FFD700;
           font-size: 2rem;
           font-weight: 700;
           margin-bottom: 0.5rem;
         }
         .circlepay-register-subtitle {
           text-align: center;
-          color: #64748b;
+          color: #ffe066;
           margin-bottom: 1.5rem;
         }
         .circlepay-register-form {
@@ -536,7 +552,7 @@ const Register = () => {
           flex-direction: column;
         }
         .circlepay-form-group label {
-          color: #0ea5e9;
+          color: #FFD700;
           margin-bottom: 0.3rem;
           font-size: 1rem;
           font-weight: 500;
@@ -544,9 +560,9 @@ const Register = () => {
         .circlepay-form-group input,
         .circlepay-form-group select,
         .country-search {
-          background: #f1f5f9;
-          color: #0f172a;
-          border: 1px solid #bae6fd;
+          background: #222;
+          color: #FFD700;
+          border: 1px solid #FFD700;
           border-radius: 7px;
           padding: 0.7rem 1rem;
           font-size: 1rem;
@@ -555,7 +571,7 @@ const Register = () => {
         .circlepay-form-group input:focus,
         .circlepay-form-group select:focus,
         .country-search:focus {
-          border-color: #0ea5e9;
+          border-color: #ffe066;
           outline: none;
         }
         .circlepay-password-input-container {
@@ -572,7 +588,7 @@ const Register = () => {
           right: 0.75rem;
           background: none;
           border: none;
-          color: #38bdf8;
+          color: #FFD700;
           cursor: pointer;
           padding: 0;
           display: flex;
@@ -581,7 +597,7 @@ const Register = () => {
           transition: color 0.2s;
         }
         .circlepay-password-toggle:hover {
-          color: #0ea5e9;
+          color: #ffe066;
         }
         .input-error {
           border-color: #ef4444;
@@ -608,27 +624,27 @@ const Register = () => {
           font-weight: 600;
           margin-top: 0.5rem;
           border-radius: 12px;
-          background: linear-gradient(90deg, #38bdf8 0%, #0ea5e9 100%);
-          color: #fff;
+          background: linear-gradient(90deg, #FFD700 0%, #ffe066 100%);
+          color: #111;
           border: none;
-          box-shadow: 0 2px 12px rgba(56,189,248,0.10);
+          box-shadow: 0 2px 12px rgba(212,175,55,0.10);
           transition: background 0.2s, color 0.2s;
         }
         .circlepay-btn.circlepay-register-btn:disabled {
-          background: #bae6fd;
-          color: #64748b;
+          background: #ffe066;
+          color: #FFD700;
         }
         .circlepay-register-footer {
           text-align: center;
           margin-top: 1.5rem;
         }
         .circlepay-login-link {
-          color: #0ea5e9;
+          color: #FFD700;
           font-weight: 500;
           text-decoration: none;
         }
         .circlepay-login-link:hover {
-          color: #38bdf8;
+          color: #ffe066;
           text-decoration: underline;
         }
         .terms-group {
@@ -639,23 +655,23 @@ const Register = () => {
           align-items: flex-start;
           gap: 0.5rem;
           font-size: 0.98rem;
-          color: #64748b;
+          color: #ffe066;
         }
         .terms-checkbox {
           margin-top: 0.2rem;
         }
         .terms-link {
-          color: #0ea5e9;
+          color: #FFD700;
           text-decoration: none;
         }
         .terms-link:hover {
-          color: #38bdf8;
+          color: #ffe066;
           text-decoration: underline;
         }
         .text-success { color: #00e676; }
         .text-error { color: #ef4444; }
         .text-warning { color: #ffb300; }
-        .text-info { color: #29b6f6; }
+        .text-info { color: #ffe066; }
         @media (max-width: 600px) {
           .circlepay-register-card {
             padding: 4.2rem 0.5rem;

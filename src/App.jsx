@@ -20,6 +20,13 @@ import Payment from "./pages/dashboard/components/payment.jsx";
 import Withdraw from "./pages/dashboard/components/withdraw.jsx";
 import CoinTrendPage from "./pages/dashboard/components/cointrendpage.jsx";
 import ActivePlan from "./pages/dashboard/components/activeplans.jsx"; // <-- Add this import
+import Airtime from "./pages/dashboard/components/airtime.jsx"; // <-- Import Airtime component
+import Data from "./pages/dashboard/components/data.jsx"; // <-- Import Data component
+import Transactions from "./pages/dashboard/components/transactions.jsx"; // <-- Import the Transactions component
+import FacialRecognition from "./pages/FacialRecognition";
+import SetTransactionCode from "./pages/SetTransactionCode";
+import SetLoginPin from "./pages/setloginpin"; // <-- Add this import
+import Reward from "./pages/dashboard/components/reward.jsx"; // <-- Import Reward component
 
 function AppRoutes() {
   const location = useLocation();
@@ -29,7 +36,7 @@ function AppRoutes() {
     // Only show MainLoader on first load of Home page
     if (location.pathname === "/") {
       setLoading(true);
-      const timer = setTimeout(() => setLoading(false), 1700);
+      const timer = setTimeout(() => setLoading(false), 3000);
       return () => clearTimeout(timer);
     } else {
       setLoading(false);
@@ -50,11 +57,18 @@ function AppRoutes() {
         <Route path="/dashboard/payment" element={<Payment />} />
         <Route path="/dashboard/withdraw" element={<Withdraw />} />
         <Route path="/dashboard/cointrend/:symbol" element={<CoinTrendPage />} />
-        <Route path="/dashboard/activeplans" element={<ActivePlan />} /> {/* <-- Add this line */}
+        <Route path="/dashboard/activeplans" element={<ActivePlan />} />
+        <Route path="/dashboard/airtime" element={<Airtime />} />
+        <Route path="/dashboard/data" element={<Data />} />
+        <Route path="/dashboard/transactions" element={<Transactions />} /> {/* <-- Add this line */}
+        <Route path="/dashboard/rewards" element={<Reward />} /> {/* <-- Add this line */}
         <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/facial-recognition" element={<FacialRecognition />} />
+        <Route path="/set-transaction-code" element={<SetTransactionCode />} />
+        <Route path="/setloginpin" element={<SetLoginPin />} /> {/* <-- Add this line */}
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />

@@ -233,32 +233,32 @@ export default function Withdraw() {
   };
 
   return (
-    <main className="min-h-screen pt-24 flex justify-center items-start bg-gradient-to-br from-blue-50 via-white to-blue-100 px-2">
-      <div className="w-full max-w-lg bg-white rounded-3xl p-8 sm:p-12 shadow-2xl border border-blue-100">
+    <main className="min-h-screen pt-24 flex justify-center items-start bg-black text-yellow-400 px-2">
+      <div className="w-full max-w-lg bg-black rounded-3xl p-8 sm:p-12 shadow-2xl border border-yellow-400">
         <div className="flex flex-col items-center mb-8">
-          <img src="/assets/images/site-logo.png" alt="CirclePay Logo" className="w-16 h-16 rounded-full shadow-lg mb-2" />
-          <h2 className="text-3xl font-extrabold text-blue-700 mb-1 text-center">Withdraw Funds</h2>
-          <p className="text-slate-600 text-center text-base">
+          <img src="/assets/images/site-logo.png" alt="CirclePay Logo" className="w-16 h-16 rounded-full shadow-lg mb-2 border-2 border-yellow-400" />
+          <h2 className="text-3xl font-extrabold text-yellow-400 mb-1 text-center">Withdraw Funds</h2>
+          <p className="text-yellow-200 text-center text-base">
             Withdraw your CirclePay earnings directly to your Nigerian bank account.
           </p>
         </div>
         <div className="mb-6 flex flex-col gap-1 text-center">
-          <div className="text-blue-700 text-sm">
+          <div className="text-yellow-400 text-sm">
             <span className="font-semibold">Maximum withdrawable:</span> ₦{maxAmount.toLocaleString()}
-            <span className="ml-2 text-cyan-500 font-semibold">{formatDollar(maxAmount)}</span>
+            <span className="ml-2 text-yellow-300 font-semibold">{formatDollar(maxAmount)}</span>
           </div>
-          <div className="text-blue-500 text-xs">
+          <div className="text-yellow-300 text-xs">
             Minimum withdrawal: ₦{minWithdraw.toLocaleString()} ({formatDollar(minWithdraw)})
           </div>
         </div>
         {successMsg && (
-          <div className="mb-4 py-3 px-4 rounded-xl bg-emerald-100 text-emerald-700 text-center font-semibold shadow animate-bounce">
+          <div className="mb-4 py-3 px-4 rounded-xl bg-emerald-900 text-emerald-300 text-center font-semibold shadow animate-bounce">
             {successMsg}
           </div>
         )}
         <form onSubmit={handleWithdraw} className="flex flex-col gap-5">
           <div>
-            <label className="text-blue-700 font-medium" htmlFor="bankName">
+            <label className="text-yellow-400 font-medium" htmlFor="bankName">
               Bank Name
             </label>
             <div className="relative mt-2">
@@ -267,7 +267,7 @@ export default function Withdraw() {
                   <input
                     id="bankSearchInput"
                     type="text"
-                    className="rounded-xl px-3 py-2 border border-blue-200 mb-2 w-full bg-blue-50 text-blue-700"
+                    className="rounded-xl px-3 py-2 border border-yellow-400 mb-2 w-full bg-yellow-900 text-yellow-400"
                     placeholder="Search bank..."
                     value={bankSearch}
                     onChange={e => setBankSearch(e.target.value)}
@@ -280,7 +280,7 @@ export default function Withdraw() {
                     <select
                       ref={bankDropdownRef}
                       id="bankName"
-                      className="absolute z-20 left-0 right-0 rounded-xl px-3 py-2 border border-blue-200 bg-white text-blue-700 w-full"
+                      className="absolute z-20 left-0 right-0 rounded-xl px-3 py-2 border border-yellow-400 bg-black text-yellow-400 w-full"
                       value=""
                       onChange={handleBankSelect}
                       size={filteredBanks.length > 8 ? 8 : filteredBanks.length}
@@ -296,7 +296,7 @@ export default function Withdraw() {
                         <option value="">No bank found</option>
                       ) : (
                         filteredBanks.map(b => (
-                          <option key={b.name} value={b.name} className="bg-white text-blue-700">
+                          <option key={b.name} value={b.name} className="bg-black text-yellow-400">
                             {b.name}
                           </option>
                         ))
@@ -306,12 +306,12 @@ export default function Withdraw() {
                 </>
               ) : (
                 <div className="flex items-center gap-2">
-                  <div className="bg-gray-100 rounded-xl px-3 py-2 mb-2 w-full flex items-center">
-                    <span className="text-blue-700 font-semibold">{bankName}</span>
+                  <div className="bg-yellow-900 rounded-xl px-3 py-2 mb-2 w-full flex items-center">
+                    <span className="text-yellow-400 font-semibold">{bankName}</span>
                   </div>
                   <button
                     type="button"
-                    className="ml-2 px-2 py-1 rounded bg-blue-200 text-blue-700 text-xs"
+                    className="ml-2 px-2 py-1 rounded bg-yellow-400 text-black text-xs"
                     onClick={handleChangeBank}
                   >
                     Change
@@ -321,19 +321,19 @@ export default function Withdraw() {
             </div>
           </div>
           <div>
-            <label className="text-blue-700 font-medium" htmlFor="accountNumber">
+            <label className="text-yellow-400 font-medium" htmlFor="accountNumber">
               Account Number
             </label>
             <input
               id="accountNumber"
               type="text"
               maxLength={10}
-              className={`rounded-xl px-3 py-2 border w-full bg-blue-50 text-blue-700 ${
+              className={`rounded-xl px-3 py-2 border w-full bg-yellow-900 text-yellow-400 ${
                 hasValidated
                   ? accountName
                     ? "border-emerald-400"
                     : "border-rose-400"
-                  : "border-blue-200"
+                  : "border-yellow-400"
               }`}
               placeholder="Enter your account number"
               value={accountNumber}
@@ -342,22 +342,22 @@ export default function Withdraw() {
               required
             />
             {resolving && (
-              <div className="flex items-center gap-2 text-cyan-500 text-xs mt-1">
-                <span className="animate-spin inline-block w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full"></span>
+              <div className="flex items-center gap-2 text-yellow-300 text-xs mt-1">
+                <span className="animate-spin inline-block w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full"></span>
                 Validating account...
               </div>
             )}
             {hasValidated && accountName && !bankError && (
-              <div className="text-emerald-500 text-xs mt-1">
+              <div className="text-emerald-400 text-xs mt-1">
                 <span className="font-semibold">Account Name:</span> {accountName}
               </div>
             )}
             {hasValidated && bankError && (
-              <div className="text-rose-500 text-xs mt-1">{bankError}</div>
+              <div className="text-rose-400 text-xs mt-1">{bankError}</div>
             )}
           </div>
           <div>
-            <label className="text-blue-700 font-medium" htmlFor="amount">
+            <label className="text-yellow-400 font-medium" htmlFor="amount">
               Amount (₦)
             </label>
             <input
@@ -366,22 +366,22 @@ export default function Withdraw() {
               min={minWithdraw}
               max={maxAmount}
               step="1"
-              className="rounded-xl px-3 py-2 border border-blue-200 w-full bg-blue-50 text-blue-700"
+              className="rounded-xl px-3 py-2 border border-yellow-400 w-full bg-yellow-900 text-yellow-400"
               placeholder={`Enter amount (min ₦${minWithdraw.toLocaleString()})`}
               value={amount}
               onChange={e => setAmount(e.target.value)}
               disabled={loading}
               required
             />
-            <div className="text-xs text-blue-500 mb-2 text-center">
+            <div className="text-xs text-yellow-300 mb-2 text-center">
               {amount
-                ? <>You will withdraw <span className="font-semibold text-blue-700">₦{Number(amount).toLocaleString()}</span> <span className="ml-1 text-cyan-500 font-semibold">{formatDollar(Number(amount))}</span></>
+                ? <>You will withdraw <span className="font-semibold text-yellow-400">₦{Number(amount).toLocaleString()}</span> <span className="ml-1 text-yellow-300 font-semibold">{formatDollar(Number(amount))}</span></>
                 : null}
             </div>
           </div>
           <button
             type="submit"
-            className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-lg shadow transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-black font-semibold text-lg shadow transition disabled:opacity-60 disabled:cursor-not-allowed"
             disabled={
               loading ||
               !accountName ||
@@ -393,17 +393,17 @@ export default function Withdraw() {
             {loading ? "Processing..." : "Withdraw"}
           </button>
           {(!canWithdraw || !amountValid) && (
-            <div className="text-rose-500 text-sm mt-2 text-center">
+            <div className="text-rose-400 text-sm mt-2 text-center">
               Minimum withdrawal is ₦{minWithdraw.toLocaleString()} ({formatDollar(minWithdraw)}).
             </div>
           )}
         </form>
-        <div className="mt-8 text-center text-blue-700 text-sm">
+        <div className="mt-8 text-center text-yellow-400 text-sm">
           Withdrawals are processed securely to your bank account.<br />
-          <span className="text-cyan-600 font-semibold">You will receive your money in the next 3hrs after withdrawal.</span>
+          <span className="text-yellow-300 font-semibold">You will receive your money in the next 3hrs after withdrawal.</span>
         </div>
-        <div className="mt-6 text-center text-xs text-slate-400">
-          Powered by <span className="font-bold text-blue-700">CirclePay</span>
+        <div className="mt-6 text-center text-xs text-yellow-700">
+          Powered by <span className="font-bold text-yellow-400">CirclePay</span>
         </div>
       </div>
       <style>{`
@@ -416,8 +416,8 @@ export default function Withdraw() {
           }
         }
         select, option {
-          background: #fff !important;
-          color: #1e293b !important;
+          background: #000 !important;
+          color: #FFD700 !important;
         }
       `}</style>
     </main>
