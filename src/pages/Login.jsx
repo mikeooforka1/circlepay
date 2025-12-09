@@ -43,10 +43,9 @@ const Login = () => {
   const { login: setAuthUser } = useAuth();
 
   const token = localStorage.getItem("token");
-  const hasLoggedInBefore = localStorage.getItem("hasLoggedInBefore") === "true";
   const lastUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userId = lastUser.id || lastUser._id;
-  const canUsePinLogin = hasLoggedInBefore && !!userId;
+  const canUsePinLogin = lastUser.firstLogin === false && !!userId;
 
   const {
     register,
@@ -100,11 +99,9 @@ const Login = () => {
       }
 
       const response = await login(payload);
-      // After successful email/password login
       localStorage.setItem("token", response.token);
       setAuthUser(response.user);
       localStorage.setItem("user", JSON.stringify(response.user));
-      localStorage.setItem("hasLoggedInBefore", "true"); // <-- Set flag
       navigate('/dashboard');
     } catch (err) {
       setRootError(
@@ -136,6 +133,7 @@ const Login = () => {
       return;
     }
     console.log("LOGIN PIN PAYLOAD:", { userId, loginPin });
+    console.log("lastUser in localStorage:", lastUser);
 
     try {
       const response = await loginWithPin({
@@ -144,6 +142,7 @@ const Login = () => {
       });
       localStorage.setItem("token", response.token);
       setAuthUser(response.user);
+      localStorage.setItem("user", JSON.stringify(response.user));
       navigate('/dashboard');
     } catch (err) {
       setPinError(
@@ -170,7 +169,7 @@ const Login = () => {
         </div>
         <h2 className="circlepay-login-title">Sign in to CirclePay</h2>
         <p className="circlepay-login-subtitle">
-          {hasLoggedInBefore
+          {canUsePinLogin
             ? `Welcome back${lastUser?.fullname ? `, ${lastUser.fullname}` : ""}! Enter your login PIN.`
             : "Access your account and invest in Nigeria’s top stocks."}
         </p>
@@ -269,6 +268,11 @@ const Login = () => {
             Don't have an account?{' '}
             <Link to="/register" className="circlepay-register-link">
               Create one here
+            </Link>
+          </p>
+          <p style={{ marginTop: "0.7rem" }}>
+            <Link to="/forgot-password" className="circlepay-register-link">
+              Forgot password?
             </Link>
           </p>
         </div>

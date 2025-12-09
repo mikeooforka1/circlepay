@@ -33,7 +33,10 @@ export default function SetLoginPin() {
       });
       const data = await res.json();
       if (data.success) {
-        navigate("/dashboard");
+        const user = JSON.parse(localStorage.getItem("user") || "{}");
+        user.firstLogin = false;
+        localStorage.setItem("user", JSON.stringify(user));
+        navigate('/dashboard');
       } else {
         setError(data.message || "Failed to set login PIN.");
       }

@@ -27,6 +27,7 @@ import FacialRecognition from "./pages/FacialRecognition";
 import SetTransactionCode from "./pages/SetTransactionCode";
 import SetLoginPin from "./pages/setloginpin"; // <-- Add this import
 import Reward from "./pages/dashboard/components/reward.jsx"; // <-- Import Reward component
+import ForgotPassword from "./pages/forgot-password.jsx"; // <-- Import the ForgotPassword page
 
 function AppRoutes() {
   const location = useLocation();
@@ -69,6 +70,7 @@ function AppRoutes() {
         <Route path="/facial-recognition" element={<FacialRecognition />} />
         <Route path="/set-transaction-code" element={<SetTransactionCode />} />
         <Route path="/setloginpin" element={<SetLoginPin />} /> {/* <-- Add this line */}
+        <Route path="/forgot-password" element={<ForgotPassword />} /> {/* <-- Add this line */}
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
