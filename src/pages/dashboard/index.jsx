@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
 import WelcomeGuideModal from "./components/WelcomeGuideModal";
-import { FaCopy } from "react-icons/fa";
+import { FaCopy, FaUsers, FaPlusCircle } from "react-icons/fa";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const NGN_TO_USD = 1461.66;
@@ -14,571 +14,486 @@ function formatDollar(ngn) {
 
 const quickActions = [
   {
-    label: "Buy Airtime",
-    icon: "📱",
-    action: "airtime",
-    desc: "Recharge any network instantly",
+    label: "Contribute",
+    icon: "💰",
+    action: "contribute",
+    desc: "Make ajo contribution",
   },
   {
-    label: "Buy Data",
-    icon: "🌐",
-    action: "data",
-    desc: "Affordable data bundles",
-  },
-  {
-    label: "Transfer Money",
-    icon: "💸",
-    action: "transfer",
-    desc: "Send money to any bank",
-  },
-  {
-    label: "Pay Bills",
-    icon: "🧾",
-    action: "bills",
-    desc: "Electricity, TV, Internet",
+    label: "Savings History",
+    icon: "📜",
+    action: "history",
+    desc: "View contribution history",
   },
   {
     label: "Fund Wallet",
     icon: "💳",
     action: "fund",
-    desc: "Add money to your account",
+    desc: "Add money to your wallet",
   },
   {
-    label: "Transaction History",
-    icon: "📜",
-    action: "history",
-    desc: "View all your transactions",
+    label: "Withdraw",
+    icon: "🏦",
+    action: "withdraw",
+    desc: "Withdraw your earnings",
   },
 ];
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
   const [balance, setBalance] = useState(0);
   const [balanceLoading, setBalanceLoading] = useState(true);
+
   const [activities, setActivities] = useState([]);
-  const [activityLoading, setActivityLoading] = useState(true);
+
+  const [groupLoading, setGroupLoading] = useState(true);
+  const [hasGroup, setHasGroup] = useState(false);
+  const [groupData, setGroupData] = useState(null);
+
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const [showTransferLockMsg, setShowTransferLockMsg] = useState(false);
+
   const [accountDetails, setAccountDetails] = useState({
-    virtualAccountNumber: "",
-    virtualBankName: "",
-    virtualAccountName: "",
-    fullname: "",
+    fixedAccountNumber: "2034567891",
+    fixedBankName: "CirclePay Microfinance Bank",
+    fixedAccountName: "CirclePay Integrated Services",
   });
-  const [showAccountModal, setShowAccountModal] = useState(false);
+
   const [copied, setCopied] = useState(false);
 
-  // Onboarding state
-  const [onboardingChecked, setOnboardingChecked] = useState(false);
-  const [onboardingLoading, setOnboardingLoading] = useState(true); // <-- loading state for backend check
+  useEffect(() => {
+    fetchBalance();
+    fetchGroup();
+  }, []);
 
-  // Fetch wallet balance
   const fetchBalance = async () => {
     try {
       const token = localStorage.getItem("token");
+
       const res = await fetch(`${API_URL}/api/wallet/details`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
       const data = await res.json();
-      setBalance(res.ok && typeof data.balance === "number" ? data.balance : 0);
 
       if (res.ok) {
-        setAccountDetails({
-          virtualAccountNumber: data.virtualAccountNumber,
-          virtualBankName: data.virtualBankName,
-          virtualAccountName: data.virtualAccountName,
-          fullname: data.fullname,
-        });
+        setBalance(data.balance || 0);
       }
-    } catch {
-      setBalance(0);
+    } catch (err) {
+      console.log(err);
     }
+
     setBalanceLoading(false);
   };
 
-  // Fetch transactions
-  const fetchTransactions = async () => {
+  const fetchGroup = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/api/transactions/my`, {
-        headers: { Authorization: `Bearer ${token}` },
+
+      const res = await fetch(`${API_URL}/api/groups/my-group`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
       const data = await res.json();
-      setActivities(res.ok && Array.isArray(data) ? data : []);
-    } catch {
-      setActivities([]);
+
+      if (res.ok && data.group) {
+        setHasGroup(true);
+        setGroupData(data.group);
+      } else {
+        setHasGroup(false);
+      }
+    } catch (err) {
+      setHasGroup(false);
     }
-    setActivityLoading(false);
+
+    setGroupLoading(false);
   };
 
-  // Check onboarding status (facial recognition, transaction pin, login pin)
-  useEffect(() => {
-    const checkOnboarding = async () => {
-      if (!user) return;
-      setOnboardingLoading(true);
-      const token = localStorage.getItem("token");
-      try {
-        const res = await fetch(`${API_URL}/api/auth/user-status`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-
-        // Only prompt if the backend says it's missing
-        if (res.ok) {
-          if (!data.facialRecognitionDone) {
-            navigate("/facial-recognition");
-            return;
-          }
-          if (!data.transactionPinSet) {
-            navigate("/set-transaction-code");
-            return;
-          }
-          if (!data.loginPinSet) {
-            navigate("/setloginpin");
-            return;
-          }
-        }
-        setOnboardingChecked(true);
-      } catch {
-        // If the check fails, allow dashboard to render (fail open)
-        setOnboardingChecked(true);
-      } finally {
-        setOnboardingLoading(false);
-      }
-    };
-    checkOnboarding();
-    // eslint-disable-next-line
-  }, [user, navigate]);
-
-  useEffect(() => {
-    let intervalId;
-    if (user && onboardingChecked) {
-      fetchBalance();
-      fetchTransactions();
-      intervalId = setInterval(() => {
-        fetchBalance();
-        fetchTransactions();
-      }, 5000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-    // eslint-disable-next-line
-  }, [user, onboardingChecked]);
-
-  useEffect(() => {
-    const handler = () => setShowAccountModal(true);
-    window.addEventListener("openFundWalletModal", handler);
-    return () => window.removeEventListener("openFundWalletModal", handler);
-  }, []);
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (onboardingLoading) {
-    // Show loading only while checking backend onboarding status
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-black text-yellow-400">
-        <div className="text-xl font-bold">Loading your dashboard...</div>
-      </div>
+  const handleCopyAccountNumber = () => {
+    navigator.clipboard.writeText(
+      accountDetails.fixedAccountNumber
     );
-  }
 
-  if (!onboardingChecked) {
-    // Prevent dashboard render until onboarding is checked
-    return null;
-  }
+    setCopied(true);
 
-  // Quick action navigation (lock transfer)
+    setTimeout(() => {
+      setCopied(false);
+    }, 1500);
+  };
+
   const handleQuickAction = (action) => {
-    if (action === "transfer") {
-      setShowTransferLockMsg(true);
-      return;
-    }
     switch (action) {
-      case "airtime":
-        navigate("/dashboard/airtime");
+      case "contribute":
+        navigate("/dashboard/contribute");
         break;
-      case "data":
-        navigate("/dashboard/data");
-        break;
-      case "bills":
-        navigate("/dashboard/pay-bills");
-        break;
-      case "fund":
-        setShowAccountModal(true); // <-- Show modal for Fund Wallet
-        break;
+
       case "history":
-        navigate("/dashboard/transactions"); // <-- Navigate to transactions page
+        navigate("/dashboard/transactions");
         break;
+
+      case "fund":
+        navigate("/dashboard/fund-wallet");
+        break;
+
+      case "withdraw":
+        navigate("/dashboard/withdraw");
+        break;
+
       default:
         break;
     }
   };
 
-  // Example function to pay a bill (airtime, data, TV, electricity)
-  async function payBill({
-    serviceID,      // e.g. "mtn", "gotv", "ikeja-electric"
-    billType,       // e.g. "airtime", "data", "tv", "electricity"
-    amount,         // e.g. 1000
-    phone,          // recipient phone/account
-    variation_code, // optional, for data/TV
-    recipient       // optional, for bills
-  }) {
-    const token = localStorage.getItem("token");
-    const res = await fetch("/api/wallet/pay-bill", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        serviceID,
-        billType,
-        amount,
-        phone,
-        variation_code,
-        recipient
-      })
-    });
-    const data = await res.json();
-    return data;
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
-
-  async function transferToBank({ amount, bankCode, accountNumber, accountName }) {
-    const token = localStorage.getItem("token");
-    const res = await fetch("/api/wallet/transfer", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        amount,
-        bankCode,
-        accountNumber,
-        accountName
-      })
-    });
-    const data = await res.json();
-    return data;
-  }
-
-  // Place this in your transfer page/component
-  const handleTransfer = async (formValues) => {
-    const result = await transferToBank(formValues);
-    if (result.message === "Transfer initiated") {
-      alert("Transfer started! Check your transaction history for updates.");
-    } else {
-      alert(result.message || "Transfer failed.");
-    }
-  };
-
-  // Example usage with form values:
-  // handleTransfer({
-  //   amount,         // from user input
-  //   bankCode,       // from user input
-  //   accountNumber,  // from user input
-  //   accountName     // from user input
-  // });
-
-  const handleCopyAccountNumber = () => {
-    if (accountDetails.virtualAccountNumber) {
-      navigator.clipboard.writeText(accountDetails.virtualAccountNumber)
-        .then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        })
-        .catch(() => {});
-    }
-  };
 
   return (
-    <main className="min-h-screen bg-black text-yellow-400 pt-28">
-      {/* Account Card */}
-      <section className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="flex flex-col items-center">
-          {/* Balance Card */}
-          <div className="w-full max-w-md bg-gradient-to-br from-yellow-400/80 via-yellow-700/70 to-yellow-400/80 rounded-3xl shadow-xl p-6 mb-6 relative">
-            <div className="flex items-center justify-between">
+    <main className="min-h-screen bg-black text-yellow-400 pt-24 pb-10">
+
+      {/* HEADER */}
+      <section className="max-w-6xl mx-auto px-4">
+
+        <div className="rounded-3xl overflow-hidden border border-yellow-400 bg-gradient-to-br from-yellow-500/20 via-black to-yellow-900/30 shadow-2xl">
+
+          <div className="p-6 md:p-8">
+
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+
               <div>
-                <div className="text-black font-semibold text-lg">Account Balance</div>
-                <div className="mt-2 text-3xl font-extrabold tracking-tight text-black">
-                  {balanceLoading ? "..." : `₦${balance.toLocaleString()}`}
-                </div>
-                <div className="text-yellow-900 font-semibold text-sm mt-1">
-                  {balanceLoading ? "" : `${formatDollar(balance)}`}
-                </div>
+                <p className="text-yellow-300 text-sm">
+                  Welcome back
+                </p>
+
+                <h1 className="text-3xl md:text-4xl font-extrabold">
+                  {user.fullname || user.username}
+                </h1>
+
+                <p className="mt-2 text-yellow-200 max-w-lg">
+                  Manage your ajo contributions, monitor your payout cycle,
+                  and grow your savings securely with CirclePay.
+                </p>
               </div>
+
               <img
                 src="/assets/images/site-logo.png"
-                alt="CirclePay Logo"
-                className="w-14 h-14 rounded-full border-2 border-yellow-400 shadow"
+                alt="logo"
+                className="w-20 h-20 rounded-full border-4 border-yellow-400 shadow-xl"
               />
             </div>
-            <div className="absolute bottom-4 right-6 text-xs text-yellow-900 font-semibold">
-              {user.fullname || user.username}
-            </div>
-            {/* Transaction History Button - now absolutely at the bottom, blocking anything below */}
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                bottom: -32,
-                zIndex: 10,
-                display: "flex",
-                justifyContent: "center",
-              }}
-            >
-              <button
-                className="w-11/12 max-w-xs px-5 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg hover:shadow-xl transition text-base border-2 border-yellow-700"
-                onClick={() => navigate("/dashboard/transactions")}
-                style={{
-                  boxShadow: "0 8px 24px 0 rgba(255, 215, 0, 0.15)",
-                }}
-              >
-                Transaction History
-              </button>
-            </div>
-          </div>
-          {/* Paystack Virtual Account Details Card */}
-          <div className="w-full max-w-md bg-black rounded-3xl shadow-xl p-6 relative border border-yellow-400 mt-10">
-            <div className="text-yellow-400 font-semibold text-lg mb-4 flex items-center gap-2">
-              <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-                <rect x="2" y="5" width="20" height="14" rx="3" fill="#FFD700" fillOpacity="0.13"/>
-                <rect x="2" y="5" width="20" height="14" rx="3" stroke="#FFD700" strokeWidth="1.5"/>
-                <rect x="6" y="9" width="12" height="2.5" rx="1.25" fill="#FFD700" fillOpacity="0.18"/>
-                <rect x="6" y="13" width="6" height="2" rx="1" fill="#FFD700" fillOpacity="0.18"/>
-              </svg>
-              Fund via Bank Transfer
-            </div>
-            <div className="flex flex-col gap-2 text-base">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Account Number:</span>
-                <div className="flex items-center justify-center mt-1">
-                  <span className="text-yellow-400 text-xl font-bold">
-                    {accountDetails.virtualAccountNumber || "---"}
-                  </span>
-                  {accountDetails.virtualAccountNumber && (
-                    <button
-                      type="button"
-                      className="ml-2 text-yellow-400 hover:text-yellow-300 focus:outline-none"
-                      onClick={handleCopyAccountNumber}
-                      aria-label="Copy account number"
-                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                    >
-                      <FaCopy size={20} />
-                    </button>
-                  )}
-                </div>
-                {copied && (
-                  <div className="text-emerald-400 text-xs font-semibold mt-1">Copied!</div>
-                )}
+
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+
+              <div className="rounded-2xl bg-black/60 border border-yellow-500 p-5">
+                <p className="text-yellow-300 text-sm">
+                  Wallet Balance
+                </p>
+
+                <h2 className="text-3xl font-extrabold mt-2">
+                  {balanceLoading
+                    ? "..."
+                    : `₦${balance.toLocaleString()}`}
+                </h2>
+
+                <p className="text-yellow-200 mt-1">
+                  {formatDollar(balance)}
+                </p>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-yellow-300">Bank Name:</span>
-                <span className="font-bold text-yellow-400">
-                  {accountDetails.virtualBankName || <span className="text-yellow-700">---</span>}
-                </span>
+
+              <div className="rounded-2xl bg-black/60 border border-yellow-500 p-5">
+                <p className="text-yellow-300 text-sm">
+                  Current Status
+                </p>
+
+                <h2 className="text-2xl font-bold mt-2">
+                  {hasGroup ? "Active Group" : "No Group Yet"}
+                </h2>
+
+                <p className="text-yellow-200 mt-1">
+                  {hasGroup
+                    ? "You are actively participating in an ajo cycle."
+                    : "Create or join an ajo group to begin saving."}
+                </p>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-yellow-300">Account Name:</span>
-                <span className="font-bold text-yellow-400">
-                  {accountDetails.virtualAccountName || accountDetails.fullname}
-                </span>
+
+              <div className="rounded-2xl bg-black/60 border border-yellow-500 p-5">
+                <p className="text-yellow-300 text-sm">
+                  Next Payout
+                </p>
+
+                <h2 className="text-2xl font-bold mt-2">
+                  {groupData?.nextPayoutDate || "--"}
+                </h2>
+
+                <p className="text-yellow-200 mt-1">
+                  Automated system payout schedule.
+                </p>
               </div>
-            </div>
-            <div className="mt-4 text-xs text-yellow-300 text-center">
-              <span>
-                Send money to this account from any Nigerian bank.<br />
-                Your wallet will be credited instantly after payment confirmation.
-              </span>
+
             </div>
           </div>
         </div>
       </section>
 
-      {/* Quick Actions */}
-      <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <h2 className="text-xl font-bold text-yellow-400 mb-4 text-center">Quick Actions</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+      {/* GROUP SECTION */}
+      <section className="max-w-6xl mx-auto px-4 mt-10">
+
+        {!groupLoading && !hasGroup ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div className="rounded-3xl border border-yellow-400 bg-black p-8 shadow-xl">
+
+              <div className="flex items-center gap-3">
+                <FaPlusCircle className="text-3xl" />
+                <h2 className="text-2xl font-bold">
+                  Create Ajo Group
+                </h2>
+              </div>
+
+              <p className="mt-4 text-yellow-200">
+                Start your own savings contribution group and invite trusted
+                members to contribute daily, weekly, or monthly.
+              </p>
+
+              <button
+                onClick={() => navigate("/dashboard/create-group")}
+                className="mt-6 px-6 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg"
+              >
+                Create Group
+              </button>
+            </div>
+
+            <div className="rounded-3xl border border-yellow-400 bg-black p-8 shadow-xl">
+
+              <div className="flex items-center gap-3">
+                <FaUsers className="text-3xl" />
+                <h2 className="text-2xl font-bold">
+                  Join Existing Group
+                </h2>
+              </div>
+
+              <p className="mt-4 text-yellow-200">
+                Join a trusted CirclePay ajo contribution group using a
+                secure group code from friends, family, or cooperatives.
+              </p>
+
+              <button
+                onClick={() => navigate("/dashboard/join-group")}
+                className="mt-6 px-6 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg"
+              >
+                Join Group
+              </button>
+            </div>
+
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-yellow-400 bg-black p-8 shadow-xl">
+
+            <div className="flex items-center justify-between flex-wrap gap-4">
+
+              <div>
+                <h2 className="text-3xl font-bold">
+                 {groupData?.groupName}
+                </h2>
+
+                <p className="text-yellow-200 mt-2">
+                  Manage your contribution cycle and track group activities.
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate("/dashboard/group")}
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg"
+              >
+                Open Group
+              </button>
+            </div>
+
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-5">
+
+              <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-4">
+                <p className="text-sm text-yellow-300">
+                  Members
+                </p>
+
+                <h3 className="text-2xl font-bold mt-2">
+                 {groupData?.members?.length || 0}
+                </h3>
+              </div>
+
+              <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-4">
+                <p className="text-sm text-yellow-300">
+                  Contribution
+                </p>
+
+                <h3 className="text-2xl font-bold mt-2">
+                  ₦{groupData?.contributionAmount || 0}
+                </h3>
+              </div>
+
+              <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-4">
+                <p className="text-sm text-yellow-300">
+                  Frequency
+                </p>
+
+                <h3 className="text-2xl font-bold mt-2">
+                  {groupData?.frequency || "Weekly"}
+                </h3>
+              </div>
+
+              <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-4">
+                <p className="text-sm text-yellow-300">
+                  Next Recipient
+                </p>
+
+                <h3 className="text-xl font-bold mt-2">
+                  {groupData?.nextRecipient || "--"}
+                </h3>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* FIXED BANK ACCOUNT */}
+      <section className="max-w-6xl mx-auto px-4 mt-10">
+
+        <div className="rounded-3xl border border-yellow-400 bg-black p-8 shadow-xl">
+
+          <div className="flex items-center justify-between flex-wrap gap-4">
+
+            <div>
+              <h2 className="text-2xl font-bold">
+                Fund Wallet via Bank Transfer
+              </h2>
+
+              <p className="text-yellow-200 mt-2">
+                Transfer money to the fixed CirclePay account below to fund your wallet.
+              </p>
+            </div>
+
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+
+            <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-5">
+              <p className="text-yellow-300 text-sm">
+                Bank Name
+              </p>
+
+              <h3 className="text-xl font-bold mt-2">
+                {accountDetails.fixedBankName}
+              </h3>
+            </div>
+
+            <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-5">
+              <p className="text-yellow-300 text-sm">
+                Account Number
+              </p>
+
+              <div className="flex items-center gap-3 mt-2">
+
+                <h3 className="text-2xl font-bold">
+                  {accountDetails.fixedAccountNumber}
+                </h3>
+
+                <button
+                  onClick={handleCopyAccountNumber}
+                  className="text-yellow-400"
+                >
+                  <FaCopy />
+                </button>
+
+              </div>
+
+              {copied && (
+                <p className="text-green-400 text-sm mt-2">
+                  Copied Successfully
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-5">
+              <p className="text-yellow-300 text-sm">
+                Account Name
+              </p>
+
+              <h3 className="text-xl font-bold mt-2">
+                {accountDetails.fixedAccountName}
+              </h3>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* QUICK ACTIONS */}
+      <section className="max-w-6xl mx-auto px-4 mt-10">
+
+        <h2 className="text-2xl font-bold mb-5">
+          Quick Actions
+        </h2>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+
           {quickActions.map((action) => (
-            action.action === "transfer" ? (
-              <div
-                key={action.action}
-                className="flex flex-col items-center justify-center rounded-2xl border border-yellow-400 bg-black p-5 shadow relative cursor-pointer"
-                onClick={() => handleQuickAction(action.action)}
-                style={{ opacity: 0.7, pointerEvents: "auto" }}
-              >
-                <span className="absolute top-3 right-3">
-                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" fill="#FFD700" fillOpacity="0.15"/>
-                    <path d="M8 11V9a4 4 0 1 1 8 0v2" stroke="#FFD700" strokeWidth="2" strokeLinecap="round"/>
-                    <rect x="8" y="11" width="8" height="7" rx="2" stroke="#FFD700" strokeWidth="2" fill="#FFD700" fillOpacity="0.08"/>
-                    <circle cx="12" cy="15" r="1" fill="#FFD700"/>
-                  </svg>
-                </span>
-                <span className="text-3xl mb-2">{action.icon}</span>
-                <span className="font-semibold text-yellow-400">{action.label}</span>
-                <span className="text-xs text-yellow-200 mt-1 text-center">{action.desc}</span>
-                <span className="mt-2 text-xs text-yellow-500 font-semibold">Locked</span>
+            <button
+              key={action.action}
+              onClick={() => handleQuickAction(action.action)}
+              className="rounded-3xl border border-yellow-400 bg-black hover:bg-yellow-900 transition p-6 text-center shadow-xl"
+            >
+              <div className="text-4xl">
+                {action.icon}
               </div>
-            ) : (
-              <button
-                key={action.action}
-                className="flex flex-col items-center justify-center rounded-2xl border border-yellow-400 bg-black p-5 shadow hover:bg-yellow-900 transition"
-                onClick={() => handleQuickAction(action.action)}
-              >
-                <span className="text-3xl mb-2">{action.icon}</span>
-                <span className="font-semibold text-yellow-400">{action.label}</span>
-                <span className="text-xs text-yellow-200 mt-1 text-center">{action.desc}</span>
-              </button>
-            )
+
+              <h3 className="mt-4 text-lg font-bold">
+                {action.label}
+              </h3>
+
+              <p className="text-sm text-yellow-200 mt-2">
+                {action.desc}
+              </p>
+            </button>
           ))}
+
         </div>
       </section>
 
-      {/* Modals */}
+      {/* REFERRAL SECTION */}
+      <section className="max-w-6xl mx-auto px-4 mt-10">
+
+        <div className="rounded-3xl bg-gradient-to-r from-yellow-700/30 to-yellow-900/30 border border-yellow-400 p-8 shadow-xl">
+
+          <h2 className="text-3xl font-bold">
+            Referral Rewards
+          </h2>
+
+          <p className="mt-3 text-yellow-200 max-w-2xl">
+            Invite friends to CirclePay and earn referral bonuses whenever
+            they join and start contributing in ajo groups.
+          </p>
+
+          <button
+            onClick={() => navigate("/dashboard/rewards")}
+            className="mt-6 px-6 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg"
+          >
+            View Rewards
+          </button>
+
+        </div>
+      </section>
+
       {showGuideModal && (
         <WelcomeGuideModal
           onClose={() => setShowGuideModal(false)}
         />
       )}
-
-      {/* Transfer Lock Popup */}
-      {showTransferLockMsg && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-yellow-900 border border-yellow-400 rounded-2xl p-8 shadow-xl text-center max-w-xs mx-auto">
-            <div className="mb-3 flex justify-center">
-              <svg width="40" height="40" fill="none" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" fill="#FFD700" fillOpacity="0.18"/>
-                <path d="M8 11V9a4 4 0 1 1 8 0v2" stroke="#FFD700" strokeWidth="2" strokeLinecap="round"/>
-                <rect x="8" y="11" width="8" height="7" rx="2" stroke="#FFD700" strokeWidth="2" fill="#FFD700" fillOpacity="0.08"/>
-                <circle cx="12" cy="15" r="1" fill="#FFD700"/>
-              </svg>
-            </div>
-            <div className="text-lg font-bold text-yellow-400 mb-2">Feature Locked</div>
-            <div className="text-yellow-200 mb-4">
-              This feature is not available yet.<br />Stay tuned!
-            </div>
-            <button
-              className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-semibold shadow"
-              onClick={() => setShowTransferLockMsg(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Fund Wallet Modal */}
-      {showAccountModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-yellow-900 border border-yellow-400 rounded-2xl p-8 shadow-xl text-center max-w-xs mx-auto">
-            <div className="mb-3 flex justify-center">
-              <svg width="40" height="40" fill="none" viewBox="0 0 24 24">
-                <rect x="2" y="5" width="20" height="14" rx="3" fill="#FFD700" fillOpacity="0.13"/>
-                <rect x="2" y="5" width="20" height="14" rx="3" stroke="#FFD700" strokeWidth="1.5"/>
-              </svg>
-            </div>
-            <div className="text-lg font-bold text-yellow-400 mb-2">Fund Your Wallet</div>
-            <div className="text-yellow-200 mb-4">
-              <div>
-                <span className="font-semibold">Account Number:</span><br />
-                <span className="text-yellow-400 text-xl font-bold flex items-center gap-2">
-                  {accountDetails.virtualAccountNumber || "---"}
-                  {accountDetails.virtualAccountNumber && (
-                    <button
-                      type="button"
-                      className="ml-2 text-yellow-400 hover:text-yellow-300 focus:outline-none"
-                      onClick={handleCopyAccountNumber}
-                      aria-label="Copy account number"
-                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                    >
-                      <FaCopy />
-                    </button>
-                  )}
-                  {copied && (
-                    <span className="ml-2 text-emerald-400 text-xs font-semibold">Copied!</span>
-                  )}
-                </span>
-              </div>
-              <div className="mt-2">
-                <span className="font-semibold">Bank Name:</span><br />
-                <span className="text-yellow-400">{accountDetails.virtualBankName || "---"}</span>
-              </div>
-              <div className="mt-2">
-                <span className="font-semibold">Account Name:</span><br />
-                <span className="text-yellow-400">{accountDetails.virtualAccountName || accountDetails.fullname}</span>
-              </div>
-              <div className="mt-4 text-xs text-yellow-300 text-center">
-                Send money to this account from any Nigerian bank.<br />
-                Your wallet will be credited instantly after payment confirmation.
-              </div>
-            </div>
-            <button
-              className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-semibold shadow"
-              onClick={() => setShowAccountModal(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Referral Reward Bonus Section */}
-      <section className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 mb-8">
-        <div className="bg-yellow-900 border border-yellow-400 rounded-2xl shadow-xl p-6 flex flex-col items-center">
-          <div className="text-lg font-bold text-yellow-300 mb-2 flex items-center gap-2">
-            <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" fill="#FFD700" fillOpacity="0.13"/>
-              <path d="M12 7v5l3 3" stroke="#FFD700" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            Referral Reward Bonus
-          </div>
-          <div className="text-yellow-200 mb-4 text-center">
-            Earn bonuses when your friends join CirclePay using your referral link and make their first transaction!
-          </div>
-          <button
-            className="mt-2 px-6 py-2 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-semibold shadow hover:from-yellow-500 hover:to-yellow-700 transition"
-            onClick={() => navigate("/dashboard/rewards")}
-          >
-            Proceed
-          </button>
-        </div>
-      </section>
-
-      <div className="mt-16 text-center text-yellow-400 text-base">
-        <span className="font-semibold text-yellow-400">CirclePay</span> — Fast, secure, and reliable digital banking for everyone.
-      </div>
-      <style>{`
-        @media (max-width: 900px) {
-          .max-w-2xl, .max-w-3xl {
-            padding: 0.5rem !important;
-          }
-        }
-        @media (max-width: 640px) {
-          main {
-            padding-top: 1.5rem !important;
-            padding-bottom: 1.5rem !important;
-          }
-          .max-w-2xl, .max-w-3xl {
-            padding: 0.5rem !important;
-          }
-          .pt-28 {
-            padding-top: 4.5rem !important;
-          }
-          .pb-8 {
-            padding-bottom: 1.5rem !important;
-          }
-          .mb-16 {
-            margin-bottom: 2.5rem !important;
-          }
-        }
-      `}</style>
     </main>
   );
 }

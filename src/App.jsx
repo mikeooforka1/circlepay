@@ -28,6 +28,9 @@ import SetTransactionCode from "./pages/SetTransactionCode";
 import SetLoginPin from "./pages/setloginpin"; // <-- Add this import
 import Reward from "./pages/dashboard/components/reward.jsx"; // <-- Import Reward component
 import ForgotPassword from "./pages/forgot-password.jsx"; // <-- Import the ForgotPassword page
+import CreateGroup from "./pages/dashboard/CreateGroup";
+import JoinGroup from "./pages/dashboard/JoinGroup";
+import GroupPage from "./pages/dashboard/GroupPage";
 
 function AppRoutes() {
   const location = useLocation();
@@ -71,6 +74,9 @@ function AppRoutes() {
         <Route path="/set-transaction-code" element={<SetTransactionCode />} />
         <Route path="/setloginpin" element={<SetLoginPin />} /> {/* <-- Add this line */}
         <Route path="/forgot-password" element={<ForgotPassword />} /> {/* <-- Add this line */}
+        <Route path="/dashboard/create-group" element={<CreateGroup />} />
+<Route path="/dashboard/join-group" element={<JoinGroup />} />
+<Route path="/dashboard/group" element={<GroupPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
