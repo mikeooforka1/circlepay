@@ -1,44 +1,98 @@
 import React from "react";
 
-// Nigerian stocks data for ticker
-const stocks = [
-  { symbol: "ZENITHBANK", name: "Zenith Bank Plc", price: "₦38.50", change: "+0.52%" },
-  { symbol: "GTCO", name: "GTCO", price: "₦41.20", change: "-0.15%" },
-  { symbol: "ACCESSCORP", name: "Access Holdings", price: "₦19.80", change: "+1.10%" },
-  { symbol: "MTNN", name: "MTN Nigeria", price: "₦245.00", change: "+0.80%" },
-  { symbol: "DANGCEM", name: "Dangote Cement", price: "₦320.00", change: "-0.25%" },
-  { symbol: "BUACEMENT", name: "BUA Cement", price: "₦98.00", change: "+0.40%" },
-  { symbol: "SEPLAT", name: "Seplat Energy", price: "₦1,450.00", change: "+0.90%" },
+// Ajo platform ticker data
+const tickerItems = [
+  {
+    title: "Daily Ajo",
+    detail: "Save ₦1,000 daily",
+    status: "Active",
+  },
+  {
+    title: "Weekly Contribution",
+    detail: "₦5,000 every week",
+    status: "Ongoing",
+  },
+  {
+    title: "Trusted Members",
+    detail: "2,500+ active savers",
+    status: "Growing",
+  },
+  {
+    title: "Instant Withdrawals",
+    detail: "Fast payout processing",
+    status: "Available",
+  },
+  {
+    title: "Group Savings",
+    detail: "Create or join ajo groups",
+    status: "Live",
+  },
+  {
+    title: "Secure Wallet",
+    detail: "Protected user funds",
+    status: "Safe",
+  },
+  {
+    title: "Flexible Contributions",
+    detail: "Daily, weekly & monthly",
+    status: "Open",
+  },
 ];
 
 export default function Ticker() {
   return (
-    <div className="relative overflow-hidden bg-white rounded-xl">
-      <div className="flex gap-8 whitespace-nowrap animate-marquee py-3">
-        {[...stocks, ...stocks].map((stock, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="text-blue-700 text-xs font-bold">{stock.symbol}</span>
-            <span className="text-sm font-semibold text-slate-800">{stock.price}</span>
-            <span className={`${stock.change.startsWith("+") ? "text-green-600" : "text-red-600"} text-xs font-medium`}>
-              {stock.change.startsWith("+") ? "▲" : "▼"} {stock.change.replace("+", "").replace("-", "")}
+    <div className="relative overflow-hidden bg-black border border-yellow-400/30 rounded-xl">
+
+      <div className="flex gap-8 whitespace-nowrap animate-marquee py-3 px-2">
+
+        {[...tickerItems, ...tickerItems].map((item, i) => (
+
+          <div
+            key={i}
+            className="flex items-center gap-2 min-w-max"
+          >
+
+            <span className="text-yellow-400 text-xs font-bold uppercase">
+              {item.title}
             </span>
+
+            <span className="text-yellow-100 text-sm font-semibold">
+              {item.detail}
+            </span>
+
+            <span className="text-green-400 text-xs font-medium">
+              ● {item.status}
+            </span>
+
           </div>
+
         ))}
+
       </div>
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent" />
+
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-black to-transparent" />
+
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-black to-transparent" />
+
       <style>
         {`
           .animate-marquee {
             display: flex;
             animation: marquee 18s linear infinite;
           }
+
           @keyframes marquee {
-            0% { transform: translateX(0%); }
-            100% { transform: translateX(-50%); }
+            0% {
+              transform: translateX(0%);
+            }
+
+            100% {
+              transform: translateX(-50%);
+            }
           }
         `}
       </style>
+
     </div>
   );
 }
