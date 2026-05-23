@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
 import WelcomeGuideModal from "./components/WelcomeGuideModal";
-import { FaCopy, FaUsers, FaPlusCircle } from "react-icons/fa";
+import FixedAccountModal from "./components/Fixedaccountmodal";
+import { FaCopy, FaUsers, FaPlusCircle, FaArrowRight, FaCreditCard, FaEye, FaEyeSlash } from "react-icons/fa";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const NGN_TO_USD = 1461.66;
@@ -14,28 +15,28 @@ function formatDollar(ngn) {
 
 const quickActions = [
   {
+    label: "Fund Wallet",
+    icon: "💳",
+    action: "fundWallet",
+    desc: "Add funds via bank transfer",
+  },
+  {
     label: "Contribute",
     icon: "💰",
     action: "contribute",
     desc: "Make ajo contribution",
   },
   {
-    label: "Savings History",
-    icon: "📜",
+    label: "History",
+    icon: "📊",
     action: "history",
-    desc: "View contribution history",
-  },
-  {
-    label: "Fund Wallet",
-    icon: "💳",
-    action: "fund",
-    desc: "Add money to your wallet",
+    desc: "View transaction history",
   },
   {
     label: "Withdraw",
-    icon: "🏦",
+    icon: "💸",
     action: "withdraw",
-    desc: "Withdraw your earnings",
+    desc: "Withdraw earnings",
   },
 ];
 
@@ -45,24 +46,30 @@ export default function Dashboard() {
 
   const [balance, setBalance] = useState(0);
   const [balanceLoading, setBalanceLoading] = useState(true);
-
-  const [activities, setActivities] = useState([]);
+  const [balanceVisible, setBalanceVisible] = useState(true);
 
   const [groupLoading, setGroupLoading] = useState(true);
   const [hasGroup, setHasGroup] = useState(false);
   const [groupData, setGroupData] = useState(null);
 
   const [showGuideModal, setShowGuideModal] = useState(false);
-
-  const [accountDetails, setAccountDetails] = useState({
-    fixedAccountNumber: "2034567891",
-    fixedBankName: "CirclePay Microfinance Bank",
-    fixedAccountName: "CirclePay Integrated Services",
-  });
-
+  const [showFixedAccountModal, setShowFixedAccountModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const [fixedAccountDetails, setFixedAccountDetails] = useState({
+    accountNumber: "2034567891",
+    bankName: "CirclePay Microfinance Bank",
+    accountName: "CirclePay Integrated Services",
+  });
+
+  // Check if user exists
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   useEffect(() => {
+    // Show guide modal for first-time users (you can customize this logic)
+    // setShowGuideModal(true);
     fetchBalance();
     fetchGroup();
   }, []);
@@ -108,6 +115,7 @@ export default function Dashboard() {
         setHasGroup(false);
       }
     } catch (err) {
+      console.log("Error fetching group:", err);
       setHasGroup(false);
     }
 
@@ -115,12 +123,8 @@ export default function Dashboard() {
   };
 
   const handleCopyAccountNumber = () => {
-    navigator.clipboard.writeText(
-      accountDetails.fixedAccountNumber
-    );
-
+    navigator.clipboard.writeText(fixedAccountDetails.accountNumber);
     setCopied(true);
-
     setTimeout(() => {
       setCopied(false);
     }, 1500);
@@ -128,16 +132,20 @@ export default function Dashboard() {
 
   const handleQuickAction = (action) => {
     switch (action) {
+      case "fundWallet":
+        setShowFixedAccountModal(true);
+        break;
+
       case "contribute":
-        navigate("/dashboard/contribute");
+        if (hasGroup) {
+          navigate("/dashboard/contribute");
+        } else {
+          alert("You need to join a group first!");
+        }
         break;
 
       case "history":
         navigate("/dashboard/transactions");
-        break;
-
-      case "fund":
-        navigate("/dashboard/fund-wallet");
         break;
 
       case "withdraw":
@@ -149,351 +157,248 @@ export default function Dashboard() {
     }
   };
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  const handleFixedAccountSuccess = (data) => {
+    // Refresh balance after successful deposit
+    fetchBalance();
+    setShowFixedAccountModal(false);
+  };
 
   return (
-    <main className="min-h-screen bg-black text-yellow-400 pt-24 pb-10">
+    <main className="min-h-screen bg-gradient-to-b from-gray-950 via-black to-gray-950 text-yellow-400 pt-20 pb-10">
+      {/* Modals */}
+      <FixedAccountModal
+        isOpen={showFixedAccountModal}
+        onClose={() => setShowFixedAccountModal(false)}
+        onSuccess={handleFixedAccountSuccess}
+      />
 
-      {/* HEADER */}
-      <section className="max-w-6xl mx-auto px-4">
-
-        <div className="rounded-3xl overflow-hidden border border-yellow-400 bg-gradient-to-br from-yellow-500/20 via-black to-yellow-900/30 shadow-2xl">
-
-          <div className="p-6 md:p-8">
-
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-
-              <div>
-                <p className="text-yellow-300 text-sm">
-                  Welcome back
-                </p>
-
-                <h1 className="text-3xl md:text-4xl font-extrabold">
-                  {user.fullname || user.username}
-                </h1>
-
-                <p className="mt-2 text-yellow-200 max-w-lg">
-                  Manage your ajo contributions, monitor your payout cycle,
-                  and grow your savings securely with CirclePay.
-                </p>
-              </div>
-
-              <img
-                src="/assets/images/site-logo.png"
-                alt="logo"
-                className="w-20 h-20 rounded-full border-4 border-yellow-400 shadow-xl"
-              />
-            </div>
-
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
-
-              <div className="rounded-2xl bg-black/60 border border-yellow-500 p-5">
-                <p className="text-yellow-300 text-sm">
-                  Wallet Balance
-                </p>
-
-                <h2 className="text-3xl font-extrabold mt-2">
-                  {balanceLoading
-                    ? "..."
-                    : `₦${balance.toLocaleString()}`}
-                </h2>
-
-                <p className="text-yellow-200 mt-1">
-                  {formatDollar(balance)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-black/60 border border-yellow-500 p-5">
-                <p className="text-yellow-300 text-sm">
-                  Current Status
-                </p>
-
-                <h2 className="text-2xl font-bold mt-2">
-                  {hasGroup ? "Active Group" : "No Group Yet"}
-                </h2>
-
-                <p className="text-yellow-200 mt-1">
-                  {hasGroup
-                    ? "You are actively participating in an ajo cycle."
-                    : "Create or join an ajo group to begin saving."}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-black/60 border border-yellow-500 p-5">
-                <p className="text-yellow-300 text-sm">
-                  Next Payout
-                </p>
-
-                <h2 className="text-2xl font-bold mt-2">
-                  {groupData?.nextPayoutDate || "--"}
-                </h2>
-
-                <p className="text-yellow-200 mt-1">
-                  Automated system payout schedule.
-                </p>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* GROUP SECTION */}
-      <section className="max-w-6xl mx-auto px-4 mt-10">
-
-        {!groupLoading && !hasGroup ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            <div className="rounded-3xl border border-yellow-400 bg-black p-8 shadow-xl">
-
-              <div className="flex items-center gap-3">
-                <FaPlusCircle className="text-3xl" />
-                <h2 className="text-2xl font-bold">
-                  Create Ajo Group
-                </h2>
-              </div>
-
-              <p className="mt-4 text-yellow-200">
-                Start your own savings contribution group and invite trusted
-                members to contribute daily, weekly, or monthly.
-              </p>
-
-              <button
-                onClick={() => navigate("/dashboard/create-group")}
-                className="mt-6 px-6 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg"
-              >
-                Create Group
-              </button>
-            </div>
-
-            <div className="rounded-3xl border border-yellow-400 bg-black p-8 shadow-xl">
-
-              <div className="flex items-center gap-3">
-                <FaUsers className="text-3xl" />
-                <h2 className="text-2xl font-bold">
-                  Join Existing Group
-                </h2>
-              </div>
-
-              <p className="mt-4 text-yellow-200">
-                Join a trusted CirclePay ajo contribution group using a
-                secure group code from friends, family, or cooperatives.
-              </p>
-
-              <button
-                onClick={() => navigate("/dashboard/join-group")}
-                className="mt-6 px-6 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg"
-              >
-                Join Group
-              </button>
-            </div>
-
-          </div>
-        ) : (
-          <div className="rounded-3xl border border-yellow-400 bg-black p-8 shadow-xl">
-
-            <div className="flex items-center justify-between flex-wrap gap-4">
-
-              <div>
-                <h2 className="text-3xl font-bold">
-                 {groupData?.groupName}
-                </h2>
-
-                <p className="text-yellow-200 mt-2">
-                  Manage your contribution cycle and track group activities.
-                </p>
-              </div>
-
-              <button
-                onClick={() => navigate("/dashboard/group")}
-                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg"
-              >
-                Open Group
-              </button>
-            </div>
-
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-5">
-
-              <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-4">
-                <p className="text-sm text-yellow-300">
-                  Members
-                </p>
-
-                <h3 className="text-2xl font-bold mt-2">
-                 {groupData?.members?.length || 0}
-                </h3>
-              </div>
-
-              <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-4">
-                <p className="text-sm text-yellow-300">
-                  Contribution
-                </p>
-
-                <h3 className="text-2xl font-bold mt-2">
-                  ₦{groupData?.contributionAmount || 0}
-                </h3>
-              </div>
-
-              <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-4">
-                <p className="text-sm text-yellow-300">
-                  Frequency
-                </p>
-
-                <h3 className="text-2xl font-bold mt-2">
-                  {groupData?.frequency || "Weekly"}
-                </h3>
-              </div>
-
-              <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-4">
-                <p className="text-sm text-yellow-300">
-                  Next Recipient
-                </p>
-
-                <h3 className="text-xl font-bold mt-2">
-                  {groupData?.nextRecipient || "--"}
-                </h3>
-              </div>
-
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* FIXED BANK ACCOUNT */}
-      <section className="max-w-6xl mx-auto px-4 mt-10">
-
-        <div className="rounded-3xl border border-yellow-400 bg-black p-8 shadow-xl">
-
-          <div className="flex items-center justify-between flex-wrap gap-4">
-
+      <div className="max-w-6xl mx-auto px-4 space-y-8">
+        {/* Welcome Section */}
+        <div className="rounded-3xl border border-yellow-400/50 bg-gradient-to-br from-purple-500/15 via-black to-purple-900/20 p-8 md:p-10 shadow-2xl backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
-              <h2 className="text-2xl font-bold">
-                Fund Wallet via Bank Transfer
-              </h2>
-
-              <p className="text-yellow-200 mt-2">
-                Transfer money to the fixed CirclePay account below to fund your wallet.
+              <p className="text-yellow-300/70 text-sm font-semibold uppercase tracking-wider mb-2">
+                Welcome back
+              </p>
+              <h1 className="text-4xl md:text-5xl font-black text-yellow-300 mb-2">
+                {user?.fullname || "User"}
+              </h1>
+              <p className="text-yellow-200/70 text-sm md:text-base max-w-lg">
+                Manage your wallet, ajo groups, and track all your savings activity in one place.
               </p>
             </div>
 
-          </div>
-
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
-
-            <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-5">
-              <p className="text-yellow-300 text-sm">
-                Bank Name
+            {/* Balance Card */}
+            <div className="rounded-2xl bg-black/40 border border-yellow-400/30 p-6 md:p-8 backdrop-blur-sm">
+              <p className="text-yellow-300/70 text-xs font-semibold uppercase tracking-wider mb-3">
+                Wallet Balance
               </p>
-
-              <h3 className="text-xl font-bold mt-2">
-                {accountDetails.fixedBankName}
-              </h3>
-            </div>
-
-            <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-5">
-              <p className="text-yellow-300 text-sm">
-                Account Number
-              </p>
-
-              <div className="flex items-center gap-3 mt-2">
-
-                <h3 className="text-2xl font-bold">
-                  {accountDetails.fixedAccountNumber}
-                </h3>
-
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-4xl font-black text-yellow-300">
+                  {balanceLoading ? (
+                    <span className="animate-pulse">...</span>
+                  ) : balanceVisible ? (
+                    `₦${balance.toLocaleString()}`
+                  ) : (
+                    "••••••"
+                  )}
+                </h2>
                 <button
-                  onClick={handleCopyAccountNumber}
-                  className="text-yellow-400"
+                  onClick={() => setBalanceVisible(!balanceVisible)}
+                  className="p-2 hover:bg-yellow-400/10 rounded-lg transition"
+                  title={balanceVisible ? "Hide balance" : "Show balance"}
                 >
-                  <FaCopy />
+                  {balanceVisible ? (
+                    <FaEye className="text-yellow-400" size={18} />
+                  ) : (
+                    <FaEyeSlash className="text-yellow-400" size={18} />
+                  )}
                 </button>
-
               </div>
-
-              {copied && (
-                <p className="text-green-400 text-sm mt-2">
-                  Copied Successfully
-                </p>
-              )}
-            </div>
-
-            <div className="rounded-2xl bg-yellow-900/20 border border-yellow-500 p-5">
-              <p className="text-yellow-300 text-sm">
-                Account Name
+              <p className="text-yellow-200/60 text-xs">
+                {formatDollar(balance)}
               </p>
-
-              <h3 className="text-xl font-bold mt-2">
-                {accountDetails.fixedAccountName}
-              </h3>
             </div>
-
           </div>
         </div>
-      </section>
 
-      {/* QUICK ACTIONS */}
-      <section className="max-w-6xl mx-auto px-4 mt-10">
-
-        <h2 className="text-2xl font-bold mb-5">
-          Quick Actions
-        </h2>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-
-          {quickActions.map((action) => (
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {quickActions.map((action, index) => (
             <button
-              key={action.action}
+              key={index}
               onClick={() => handleQuickAction(action.action)}
-              className="rounded-3xl border border-yellow-400 bg-black hover:bg-yellow-900 transition p-6 text-center shadow-xl"
+              className="rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/10 to-yellow-900/5 p-6 hover:border-yellow-400/60 hover:bg-yellow-500/15 transition duration-300 backdrop-blur-sm group"
             >
-              <div className="text-4xl">
+              <div className="text-3xl mb-3 group-hover:scale-110 transition">
                 {action.icon}
               </div>
-
-              <h3 className="mt-4 text-lg font-bold">
+              <h3 className="font-bold text-yellow-300 text-sm mb-1">
                 {action.label}
               </h3>
-
-              <p className="text-sm text-yellow-200 mt-2">
+              <p className="text-yellow-200/60 text-xs leading-tight">
                 {action.desc}
               </p>
             </button>
           ))}
-
         </div>
-      </section>
 
-      {/* REFERRAL SECTION */}
-      <section className="max-w-6xl mx-auto px-4 mt-10">
+        {/* Group Section */}
+        {groupLoading ? (
+          <div className="rounded-3xl border border-yellow-400/50 bg-gradient-to-br from-purple-500/15 via-black to-purple-900/20 p-8 md:p-10 shadow-2xl backdrop-blur-sm">
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-yellow-400/30 border-t-yellow-400 mx-auto mb-4"></div>
+              <p className="text-yellow-200/70">Loading group information...</p>
+            </div>
+          </div>
+        ) : hasGroup ? (
+          <div className="rounded-3xl border border-yellow-400/50 bg-gradient-to-br from-purple-500/15 via-black to-purple-900/20 p-8 md:p-10 shadow-2xl backdrop-blur-sm">
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="inline-block w-3 h-3 rounded-full bg-green-400 animate-pulse"></span>
+                <p className="text-yellow-300/70 text-xs font-semibold uppercase tracking-wider">
+                  Active Group
+                </p>
+              </div>
+              <h2 className="text-3xl font-black text-yellow-300 mb-2">
+                {groupData?.groupName}
+              </h2>
+              <p className="text-yellow-200/70 text-sm">
+                Group Code: <span className="font-mono font-bold text-yellow-300">{groupData?.groupCode}</span>
+              </p>
+            </div>
 
-        <div className="rounded-3xl bg-gradient-to-r from-yellow-700/30 to-yellow-900/30 border border-yellow-400 p-8 shadow-xl">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="rounded-xl bg-black/40 border border-yellow-400/30 p-4">
+                <p className="text-yellow-300/70 text-xs font-semibold uppercase mb-2">
+                  Members
+                </p>
+                <p className="text-2xl font-black text-yellow-300">
+                  {groupData?.members?.length || 0}
+                </p>
+              </div>
 
-          <h2 className="text-3xl font-bold">
-            Referral Rewards
-          </h2>
+              <div className="rounded-xl bg-black/40 border border-yellow-400/30 p-4">
+                <p className="text-yellow-300/70 text-xs font-semibold uppercase mb-2">
+                  Contribution
+                </p>
+                <p className="text-2xl font-black text-yellow-300">
+                  ₦{groupData?.contributionAmount?.toLocaleString() || 0}
+                </p>
+              </div>
 
-          <p className="mt-3 text-yellow-200 max-w-2xl">
-            Invite friends to CirclePay and earn referral bonuses whenever
-            they join and start contributing in ajo groups.
-          </p>
+              <div className="rounded-xl bg-black/40 border border-yellow-400/30 p-4">
+                <p className="text-yellow-300/70 text-xs font-semibold uppercase mb-2">
+                  Frequency
+                </p>
+                <p className="text-2xl font-black text-yellow-300">
+                  {groupData?.frequency}
+                </p>
+              </div>
 
-          <button
-            onClick={() => navigate("/dashboard/rewards")}
-            className="mt-6 px-6 py-3 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold shadow-lg"
-          >
-            View Rewards
-          </button>
+              <div className="rounded-xl bg-black/40 border border-yellow-400/30 p-4">
+                <p className="text-yellow-300/70 text-xs font-semibold uppercase mb-2">
+                  Payout Cycle
+                </p>
+                <p className="text-2xl font-black text-yellow-300">
+                  {groupData?.payoutDuration}d
+                </p>
+              </div>
+            </div>
 
+            <button
+              onClick={() => navigate("/dashboard/group")}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold hover:scale-105 transition flex items-center justify-center gap-2"
+            >
+              View Group Details <FaArrowRight size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-yellow-400/50 bg-gradient-to-br from-purple-500/15 via-black to-purple-900/20 p-8 md:p-10 shadow-2xl backdrop-blur-sm text-center">
+            <FaUsers className="text-4xl text-yellow-400 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-yellow-300 mb-3">
+              No Group Yet
+            </h3>
+            <p className="text-yellow-200/70 mb-6">
+              Join or create an ajo group to start saving with friends
+            </p>
+            <div className="flex flex-col md:flex-row gap-4">
+              <button
+                onClick={() => navigate("/dashboard/create-group")}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold hover:scale-105 transition flex items-center justify-center gap-2"
+              >
+                <FaPlusCircle size={18} /> Create Group
+              </button>
+              <button
+                onClick={() => navigate("/dashboard/join-group")}
+                className="flex-1 py-3 rounded-xl border border-yellow-400/50 text-yellow-300 font-bold hover:bg-yellow-400/10 transition"
+              >
+                Join Group
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Fixed Account Card */}
+        <div className="rounded-3xl border border-yellow-400/50 bg-gradient-to-br from-blue-500/10 to-blue-900/5 p-8 md:p-10 shadow-lg backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <p className="text-yellow-300/70 text-xs font-semibold uppercase tracking-wider mb-2">
+                💳 Our Fixed Account
+              </p>
+              <h3 className="text-2xl font-bold text-yellow-300 mb-3">
+                Fund Your Wallet via Bank Transfer
+              </h3>
+              <p className="text-yellow-200/70 text-sm max-w-2xl">
+                Transfer funds directly to our fixed account and your wallet will be credited instantly after verification.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowFixedAccountModal(true)}
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-400 to-blue-600 text-black font-bold hover:scale-105 transition flex items-center gap-2 flex-shrink-0"
+            >
+              <FaCreditCard size={18} /> Fund Now
+            </button>
+          </div>
+
+          {/* Account Details Preview */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="rounded-xl bg-black/40 border border-yellow-400/20 p-4">
+              <p className="text-yellow-300/70 text-xs font-semibold uppercase mb-2">
+                Account Number
+              </p>
+              <p className="text-lg font-mono font-bold text-yellow-300 mb-2">
+                {fixedAccountDetails.accountNumber}
+              </p>
+              <button
+                onClick={handleCopyAccountNumber}
+                className="text-xs text-yellow-400 hover:text-yellow-300 flex items-center gap-1"
+              >
+                <FaCopy size={12} /> {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+
+            <div className="rounded-xl bg-black/40 border border-yellow-400/20 p-4">
+              <p className="text-yellow-300/70 text-xs font-semibold uppercase mb-2">
+                Bank Name
+              </p>
+              <p className="text-lg font-bold text-yellow-300">
+                {fixedAccountDetails.bankName}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-black/40 border border-yellow-400/20 p-4">
+              <p className="text-yellow-300/70 text-xs font-semibold uppercase mb-2">
+                Account Name
+              </p>
+              <p className="text-lg font-bold text-yellow-300">
+                {fixedAccountDetails.accountName}
+              </p>
+            </div>
+          </div>
         </div>
-      </section>
-
-      {showGuideModal && (
-        <WelcomeGuideModal
-          onClose={() => setShowGuideModal(false)}
-        />
-      )}
+      </div>
     </main>
   );
 }

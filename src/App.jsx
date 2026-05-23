@@ -49,38 +49,59 @@ function AppRoutes() {
 
   if (loading && location.pathname === "/") return <MainLoader />;
   if (loading) return <Spinner />;
+const hideFooterRoutes = [
+  "/dashboard",
+  "/profile",
+  "/dashboard/payment",
+  "/dashboard/withdraw",
+  "/dashboard/airtime",
+  "/dashboard/data",
+  "/dashboard/transactions",
+  "/dashboard/rewards",
+  "/dashboard/activeplans",
+  "/dashboard/create-group",
+  "/dashboard/join-group",
+  "/dashboard/group",
+];
 
+const showFooter = !hideFooterRoutes.some(route =>
+  location.pathname.startsWith(route)
+);
   return (
-    <div className="min-h-screen bg-[#090b14] text-white relative">
-      <NavBar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/sectors" element={<Sectors />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/dashboard/payment" element={<Payment />} />
-        <Route path="/dashboard/withdraw" element={<Withdraw />} />
-        <Route path="/dashboard/cointrend/:symbol" element={<CoinTrendPage />} />
-        <Route path="/dashboard/activeplans" element={<ActivePlan />} />
-        <Route path="/dashboard/airtime" element={<Airtime />} />
-        <Route path="/dashboard/data" element={<Data />} />
-        <Route path="/dashboard/transactions" element={<Transactions />} /> {/* <-- Add this line */}
-        <Route path="/dashboard/rewards" element={<Reward />} /> {/* <-- Add this line */}
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/facial-recognition" element={<FacialRecognition />} />
-        <Route path="/set-transaction-code" element={<SetTransactionCode />} />
-        <Route path="/setloginpin" element={<SetLoginPin />} /> {/* <-- Add this line */}
-        <Route path="/forgot-password" element={<ForgotPassword />} /> {/* <-- Add this line */}
-        <Route path="/dashboard/create-group" element={<CreateGroup />} />
-<Route path="/dashboard/join-group" element={<JoinGroup />} />
-<Route path="/dashboard/group" element={<GroupPage />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Footer />
-    </div>
+  <div className="min-h-screen flex flex-col bg-[#090b14] text-white relative">
+  <NavBar />
+
+  <main className="flex-1">
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/sectors" element={<Sectors />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/dashboard/payment" element={<Payment />} />
+      <Route path="/dashboard/withdraw" element={<Withdraw />} />
+      <Route path="/dashboard/cointrend/:symbol" element={<CoinTrendPage />} />
+      <Route path="/dashboard/activeplans" element={<ActivePlan />} />
+      <Route path="/dashboard/airtime" element={<Airtime />} />
+      <Route path="/dashboard/data" element={<Data />} />
+      <Route path="/dashboard/transactions" element={<Transactions />} />
+      <Route path="/dashboard/rewards" element={<Reward />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/facial-recognition" element={<FacialRecognition />} />
+      <Route path="/set-transaction-code" element={<SetTransactionCode />} />
+      <Route path="/setloginpin" element={<SetLoginPin />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/dashboard/create-group" element={<CreateGroup />} />
+      <Route path="/dashboard/join-group" element={<JoinGroup />} />
+      <Route path="/dashboard/group" element={<GroupPage />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  </main>
+
+ {showFooter && <Footer />}
+</div>
   );
 }
 
