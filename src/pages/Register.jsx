@@ -27,8 +27,168 @@ const countries = [
   { name: "India", code: "+91" },
 ];
 
+// Loading/Redirect Component
+const LoadingRedirect = ({ userName }) => {
+  return (
+    <div className="loading-redirect-container">
+      <div className="loading-redirect-content">
+        {/* Logo */}
+        <div className="loading-redirect-logo">
+          <img src="/assets/images/site-logo.png" alt="CirclePay Logo" />
+        </div>
+
+        {/* Spinner */}
+        <div className="loading-spinner">
+          <div className="spinner-circle"></div>
+        </div>
+
+        {/* Loading Text */}
+        <h2 className="loading-title">Welcome to CirclePay</h2>
+        <p className="loading-subtitle">
+          {userName ? `Welcome, ${userName}!` : 'Setting up your account...'}
+        </p>
+
+        {/* Progress Bar */}
+        <div className="loading-progress-bar">
+          <div className="progress-fill"></div>
+        </div>
+
+        {/* Additional Info */}
+        <p className="loading-info">Preparing your dashboard...</p>
+      </div>
+
+      <style>{`
+        .loading-redirect-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(120deg, #000 0%, #222 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+        }
+
+        .loading-redirect-content {
+          text-align: center;
+          max-width: 300px;
+        }
+
+        .loading-redirect-logo {
+          margin-bottom: 2rem;
+          animation: fadeInScale 0.6s ease-out;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .loading-redirect-logo img {
+          width: 80px;
+          height: 80px;
+          border-radius: 16px;
+          background: #FFD700;
+          object-fit: cover;
+          box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .loading-spinner {
+          margin-bottom: 2rem;
+          height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .spinner-circle {
+          width: 50px;
+          height: 50px;
+          border: 4px solid rgba(212, 175, 55, 0.2);
+          border-top: 4px solid #FFD700;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+          color: #FFD700;
+          font-size: 1.8rem;
+          font-weight: 700;
+          margin-bottom: 0.5rem;
+          animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .loading-subtitle {
+          color: #ffe066;
+          font-size: 1rem;
+          margin-bottom: 1.5rem;
+          animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .loading-progress-bar {
+          width: 100%;
+          height: 4px;
+          background: rgba(212, 175, 55, 0.2);
+          border-radius: 2px;
+          overflow: hidden;
+          margin-bottom: 1.5rem;
+          animation: fadeInUp 0.8s ease-out 0.6s both;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #FFD700 0%, #ffe066 100%);
+          border-radius: 2px;
+          animation: progressExpand 2s ease-in-out;
+        }
+
+        @keyframes progressExpand {
+          0% { width: 0%; }
+          50% { width: 70%; }
+          100% { width: 100%; }
+        }
+
+        .loading-info {
+          color: #ffe066;
+          font-size: 0.95rem;
+          animation: fadeInUp 0.8s ease-out 0.8s both;
+        }
+
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [redirectUserName, setRedirectUserName] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, text: '', color: '' });
@@ -135,7 +295,7 @@ const Register = () => {
       age: data.age,
       dob: data.dob,
       gender: data.gender,
-      referralCode: data.referralCode || undefined, // <-- Add this line
+      referralCode: data.referralCode || undefined,
     };
 
     for (const [key, value] of Object.entries(payload)) {
@@ -153,7 +313,15 @@ const Register = () => {
       const response = await registerUser(payload);
       localStorage.setItem("token", response.token);
       setAuthUser(response.user);
-      navigate('/facial-recognition');
+
+      // Show redirect screen
+      setRedirectUserName(response.user?.fullname?.split(' ')[0] || 'User');
+      setIsRedirecting(true);
+
+      // Navigate after animation completes
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 3500);
     } catch (error) {
       setError('root', {
         type: 'manual',
@@ -167,6 +335,11 @@ const Register = () => {
     }
   };
 
+  // Show loading redirect screen
+  if (isRedirecting) {
+    return <LoadingRedirect userName={redirectUserName} />;
+  }
+
   return (
     <div className="circlepay-register-page">
       <div className="circlepay-register-card">
@@ -174,7 +347,7 @@ const Register = () => {
           <img src="/assets/images/site-logo.png" alt="CirclePay Logo" />
         </div>
         <h2 className="circlepay-register-title">Create Your CirclePay Account</h2>
-        <p className="circlepay-register-subtitle">Sign up to invest in Nigeria’s top stocks.</p>
+        <p className="circlepay-register-subtitle">Sign up to Cirlepay best Ajo platform</p>
         <form onSubmit={handleSubmit(onSubmit)} className="circlepay-register-form">
           {errors.root && (
             <div className="circlepay-register-error" role="alert">
@@ -250,11 +423,9 @@ const Register = () => {
                 {...register('password', {
                   required: 'Password is required',
                   minLength: { value: 8, message: 'Password must be at least 8 characters' },
-                  validate: (value) => {
-                    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(value)) {
-                      return 'Password must contain uppercase, lowercase, and number';
-                    }
-                    return true;
+                  validate: {
+                    hasUpperCase: (value) => /[A-Z]/.test(value) || 'Must contain at least one uppercase letter',
+                    hasNumber: (value) => /[0-9]/.test(value) || 'Must contain at least one number',
                   }
                 })}
                 className={errors.password ? 'input-error' : ''}
@@ -263,18 +434,20 @@ const Register = () => {
               <button
                 type="button"
                 className="circlepay-password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
-            {watchPassword && passwordStrength.text && (
-              <span className={passwordStrength.color}>
-                Password strength: {passwordStrength.text}
-              </span>
-            )}
             {errors.password && (
               <span className="error-message">{errors.password.message}</span>
+            )}
+            {watchPassword && (
+              <span className={`password-strength ${passwordStrength.color}`}>
+                Strength: {passwordStrength.text}
+              </span>
             )}
           </div>
           <div className="circlepay-form-group">
@@ -282,11 +455,10 @@ const Register = () => {
             <div className="circlepay-password-input-container">
               <input
                 type={showConfirmPassword ? "text" : "password"}
-                placeholder="Re-enter your password"
+                placeholder="Confirm your password"
                 {...register('confirmPassword', {
                   required: 'Please confirm your password',
-                  validate: (value) =>
-                    value === watchPassword || 'Passwords do not match'
+                  validate: (value) => value === watchPassword || 'Passwords do not match'
                 })}
                 className={errors.confirmPassword ? 'input-error' : ''}
                 autoComplete="new-password"
@@ -294,7 +466,9 @@ const Register = () => {
               <button
                 type="button"
                 className="circlepay-password-toggle"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                tabIndex={-1}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
               >
                 {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
@@ -304,120 +478,78 @@ const Register = () => {
             )}
           </div>
           <div className="circlepay-form-group">
-            <label>Country</label>
+            <label>Phone Number</label>
             <input
-              type="text"
-              placeholder="Search country..."
-              value={countrySearch}
-              onChange={e => setCountrySearch(e.target.value)}
-              className="country-search"
+              type="tel"
+              placeholder="Enter your phone number"
+              {...register('phone', {
+                required: 'Phone number is required',
+                pattern: {
+                  value: /^[0-9+\-\s()]{7,}$/,
+                  message: 'Invalid phone number'
+                }
+              })}
+              className={errors.phone ? 'input-error' : ''}
+              autoComplete="tel"
             />
+            {errors.phone && (
+              <span className="error-message">{errors.phone.message}</span>
+            )}
+          </div>
+          <div className="circlepay-form-group">
+            <label>Country</label>
             <select
               {...register('country', { required: 'Country is required' })}
               className={errors.country ? 'input-error' : ''}
-              value={watch('country') || ''}
-              onChange={e => {
-                const selectedCountry = countries.find(c => c.name === e.target.value);
-                setCountryCode(selectedCountry?.code || '');
-                setValue('country', e.target.value);
-                setValue('countryCode', selectedCountry?.code || '');
-              }}
             >
-              <option value="" disabled>Select your country</option>
-              {countries
-                .filter(c => c.name.toLowerCase().includes(countrySearch.toLowerCase()))
-                .map(c => (
-                  <option key={c.name} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
+              <option value="">Select your country</option>
+              {countries.map((country) => (
+                <option key={country.code} value={country.name}>
+                  {country.name}
+                </option>
+              ))}
             </select>
             {errors.country && (
               <span className="error-message">{errors.country.message}</span>
             )}
           </div>
           <div className="circlepay-form-group">
-            <label>Phone Number</label>
-            <div className="flex" style={{ display: 'flex', gap: '0.5rem' }}>
-              <select
-                {...register('countryCode', {
-                  required: 'Country code is required'
-                })}
-                className={errors.countryCode ? 'input-error' : ''}
-                style={{ flex: '0 0 auto', minWidth: '100px' }}
-              >
-                <option value="" disabled>Code</option>
-                {countries.map(c => (
-                  <option key={c.code + c.name} value={c.code}>
-                    {c.code}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="tel"
-                placeholder="Enter your phone number"
-                className={errors.phone ? 'input-error' : ''}
-                style={{ flex: '1' }}
-                {...register('phone', {
-                  required: 'Phone number is required',
-                  pattern: {
-                    value: /^[0-9+\-\s()]{7,15}$/,
-                    message: 'Enter a valid phone number (7-15 digits)'
-                  }
-                })}
-              />
-            </div>
-            {(errors.countryCode || errors.phone) && (
-              <span className="error-message">
-                {errors.countryCode?.message || errors.phone?.message}
-              </span>
-            )}
-          </div>
-          <div className="circlepay-form-group">
-            <label>Age</label>
-            <input
-              type="number"
-              placeholder="Enter your age"
-              {...register('age', { 
-                required: 'Age is required', 
-                min: { value: 1, message: 'Enter a valid age' },
-                max: { value: 120, message: 'Age must be realistic' },
-                validate: (value) => {
-                  const dob = watch('dob');
-                  if (dob) {
-                    const calculatedAge = calculateAge(dob);
-                    return parseInt(value) === calculatedAge || `Age must match date of birth (should be ${calculatedAge})`;
-                  }
-                  return true;
-                }
-              })}
-              className={errors.age ? 'input-error' : ''}
-            />
-            {errors.age && (
-              <span className="error-message">{errors.age.message}</span>
+            <label>Country Code</label>
+            <select
+              {...register('countryCode', { required: 'Country code is required' })}
+              className={errors.countryCode ? 'input-error' : ''}
+            >
+              <option value="">Select country code</option>
+              {countries.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.code}
+                </option>
+              ))}
+            </select>
+            {errors.countryCode && (
+              <span className="error-message">{errors.countryCode.message}</span>
             )}
           </div>
           <div className="circlepay-form-group">
             <label>Date of Birth</label>
             <input
               type="date"
-              {...register('dob', { 
-                required: 'Date of birth is required',
-                validate: (value) => {
-                  const age = watch('age');
-                  if (age) {
-                    const calculatedAge = calculateAge(value);
-                    return parseInt(age) === calculatedAge || `Date of birth must match age (calculated age: ${calculatedAge})`;
-                  }
-                  return true;
-                }
-              })}
+              {...register('dob', { required: 'Date of birth is required' })}
               className={errors.dob ? 'input-error' : ''}
-              max={new Date().toISOString().split('T')[0]}
             />
             {errors.dob && (
               <span className="error-message">{errors.dob.message}</span>
             )}
+          </div>
+          <div className="circlepay-form-group">
+            <label>Age</label>
+            <input
+              type="number"
+              placeholder="Age (auto-calculated)"
+              {...register('age', { required: 'Age is required' })}
+              className={errors.age ? 'input-error' : ''}
+              disabled
+            />
           </div>
           <div className="circlepay-form-group">
             <label>Gender</label>
@@ -425,7 +557,7 @@ const Register = () => {
               {...register('gender', { required: 'Gender is required' })}
               className={errors.gender ? 'input-error' : ''}
             >
-              <option value="">Select gender</option>
+              <option value="">Select your gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
               <option value="other">Other</option>
@@ -667,6 +799,11 @@ const Register = () => {
         .terms-link:hover {
           color: #ffe066;
           text-decoration: underline;
+        }
+        .password-strength {
+          font-size: 0.95rem;
+          margin-top: 0.2rem;
+          font-weight: 500;
         }
         .text-success { color: #00e676; }
         .text-error { color: #ef4444; }

@@ -90,7 +90,8 @@ const Profile = () => {
       if (res.ok) {
         const data = await res.json();
         setProfile(data.user);
-        login(data.user);
+     login(data.user);
+localStorage.setItem("user", JSON.stringify(data.user));
         setEditing(false);
       }
     } catch (e) {}
@@ -129,69 +130,119 @@ const Profile = () => {
 
   return (
     <main className="min-h-screen pt-24 pb-10 flex justify-center items-start bg-gradient-to-br from-[#10141a] to-[#1e293b]">
-      <div className="w-full max-w-lg bg-white/10 border border-white/10 rounded-2xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+     <div className="w-full max-w-5xl bg-white/10 border border-white/10 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
         {/* Decorative background */}
         <div className="absolute -top-16 -right-16 w-40 h-40 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none"></div>
         <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-400 rounded-t-2xl opacity-70"></div>
-        <div className="flex flex-col items-center mb-8 relative">
-          <div className="relative group">
-            <img
-              src={avatarPreview || DEFAULT_AVATAR}
-              alt="Avatar"
-              className="w-32 h-32 rounded-full object-cover border-4 border-cyan-400 shadow-lg bg-white transition-transform duration-300 group-hover:scale-105"
-            />
-            {editing ? (
-              <>
-                <button
-                  className="absolute bottom-1 right-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-full p-2 shadow transition-opacity opacity-80 group-hover:opacity-100"
-                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                  title="Change Profile Photo"
-                  style={{ zIndex: 2 }}
-                  type="button"
-                >
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="9" cy="9" r="7" />
-                    <path d="M9 5v4l2 2" />
-                  </svg>
-                </button>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  style={{ display: "none" }}
-                  onChange={handleAvatarChange}
-                />
-              </>
-            ) : (
-              <button
-                className="absolute bottom-1 right-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-full p-2 shadow transition-opacity opacity-80 group-hover:opacity-100"
-                onClick={handleEdit}
-                title="Edit Profile"
-                style={{ zIndex: 2 }}
-                type="button"
-              >
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="9" cy="9" r="7" />
-                  <path d="M9 5v4l2 2" />
-                </svg>
-              </button>
-            )}
+       <div className="relative mb-10">
+  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-yellow-500/10 to-amber-500/10 rounded-3xl"></div>
+
+  <div className="relative flex flex-col lg:flex-row items-center lg:items-start gap-8 p-4">
+    <div className="relative group">
+      <img
+        src={avatarPreview || DEFAULT_AVATAR}
+        alt="Avatar"
+        className="w-40 h-40 rounded-full object-cover border-4 border-cyan-400 shadow-2xl bg-white"
+      />
+
+      {editing ? (
+        <>
+          <button
+            className="absolute bottom-2 right-2 bg-cyan-600 hover:bg-cyan-700 text-white p-3 rounded-full shadow-lg transition"
+            onClick={() =>
+              fileInputRef.current && fileInputRef.current.click()
+            }
+            type="button"
+            title="Change Profile Photo"
+          >
+            📷
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleAvatarChange}
+          />
+        </>
+      ) : (
+        <button
+          className="absolute bottom-2 right-2 bg-cyan-600 hover:bg-cyan-700 text-white p-3 rounded-full shadow-lg transition"
+          onClick={handleEdit}
+          type="button"
+          title="Edit Profile"
+        >
+          ✏️
+        </button>
+      )}
+    </div>
+
+    <div className="flex-1 text-center lg:text-left">
+      <h1 className="text-4xl font-bold text-white mb-2">
+        {profile.fullname}
+      </h1>
+
+      <p className="text-cyan-300 text-lg font-medium">
+        @{profile.username}
+      </p>
+
+      <p className="text-gray-300 mt-2 break-all">
+        {profile.email}
+      </p>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-sm">
+          <div className="text-yellow-400 font-bold text-xl">
+            {profile.country || "--"}
           </div>
-          <h2 className="mt-4 text-2xl font-bold text-white">{profile.fullname}</h2>
-          <span className="text-cyan-300 font-mono">@{profile.username}</span>
-          {!editing && (
-            <button
-              className="mt-4 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-400 hover:from-cyan-500 hover:to-yellow-500 text-slate-900 font-semibold text-sm shadow transition"
-              onClick={handleEdit}
-              disabled={uploading}
-              type="button"
-            >
-              Edit Profile
-            </button>
-          )}
+          <div className="text-white/60 text-sm">
+            Country
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-4">
+
+        <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-sm">
+          <div className="text-yellow-400 font-bold text-xl">
+            {profile.age || "--"}
+          </div>
+          <div className="text-white/60 text-sm">
+            Age
+          </div>
+        </div>
+
+        <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-sm">
+          <div className="text-yellow-400 font-bold text-xl">
+            {profile.gender || "--"}
+          </div>
+          <div className="text-white/60 text-sm">
+            Gender
+          </div>
+        </div>
+
+        <div className="bg-white/5 rounded-2xl p-4 border border-white/10 backdrop-blur-sm">
+          <div className="text-green-400 font-bold text-xl">
+            Active
+          </div>
+          <div className="text-white/60 text-sm">
+            Status
+          </div>
+        </div>
+      </div>
+
+      {!editing && (
+        <button
+          className="mt-6 px-6 py-3 rounded-full bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-400 hover:from-cyan-500 hover:to-yellow-500 text-slate-900 font-semibold shadow-lg transition-all duration-300 hover:scale-105"
+          onClick={handleEdit}
+          type="button"
+        >
+          Edit Profile
+        </button>
+      )}
+    </div>
+  </div>
+</div>
+       <div className="grid md:grid-cols-2 gap-5">
           {editing ? (
             <>
               <ProfileEditField label="Full Name" name="fullname" value={editFields.fullname} onChange={handleFieldChange} />

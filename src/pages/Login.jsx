@@ -23,7 +23,7 @@ async function loginWithPin(payload) {
   const res = await fetch(`${API_URL}/api/auth/login-pin`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload), // <-- use the payload passed in
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const error = await res.json();
@@ -32,8 +32,168 @@ async function loginWithPin(payload) {
   return res.json();
 }
 
+// Loading/Redirect Component
+const LoadingRedirect = ({ userName }) => {
+  return (
+    <div className="loading-redirect-container">
+      <div className="loading-redirect-content">
+        {/* Logo */}
+        <div className="loading-redirect-logo">
+          <img src="/assets/images/site-logo.png" alt="CirclePay Logo" />
+        </div>
+
+        {/* Spinner */}
+        <div className="loading-spinner">
+          <div className="spinner-circle"></div>
+        </div>
+
+        {/* Loading Text */}
+        <h2 className="loading-title">Welcome to CirclePay</h2>
+        <p className="loading-subtitle">
+          {userName ? `Welcome back, ${userName}!` : 'Preparing your account...'}
+        </p>
+
+        {/* Progress Bar */}
+        <div className="loading-progress-bar">
+          <div className="progress-fill"></div>
+        </div>
+
+        {/* Additional Info */}
+        <p className="loading-info">Setting up your dashboard...</p>
+      </div>
+
+      <style>{`
+        .loading-redirect-container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(120deg, #000 0%, #222 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+        }
+
+        .loading-redirect-content {
+          text-align: center;
+          max-width: 300px;
+        }
+
+        .loading-redirect-logo {
+          margin-bottom: 2rem;
+          animation: fadeInScale 0.6s ease-out;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .loading-redirect-logo img {
+          width: 80px;
+          height: 80px;
+          border-radius: 16px;
+          background: #FFD700;
+          object-fit: cover;
+          box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .loading-spinner {
+          margin-bottom: 2rem;
+          height: 60px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .spinner-circle {
+          width: 50px;
+          height: 50px;
+          border: 4px solid rgba(212, 175, 55, 0.2);
+          border-top: 4px solid #FFD700;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+          color: #FFD700;
+          font-size: 1.8rem;
+          font-weight: 700;
+          margin-bottom: 0.5rem;
+          animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .loading-subtitle {
+          color: #ffe066;
+          font-size: 1rem;
+          margin-bottom: 1.5rem;
+          animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .loading-progress-bar {
+          width: 100%;
+          height: 4px;
+          background: rgba(212, 175, 55, 0.2);
+          border-radius: 2px;
+          overflow: hidden;
+          margin-bottom: 1.5rem;
+          animation: fadeInUp 0.8s ease-out 0.6s both;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #FFD700 0%, #ffe066 100%);
+          border-radius: 2px;
+          animation: progressExpand 2s ease-in-out;
+        }
+
+        @keyframes progressExpand {
+          0% { width: 0%; }
+          50% { width: 70%; }
+          100% { width: 100%; }
+        }
+
+        .loading-info {
+          color: #ffe066;
+          font-size: 0.95rem;
+          animation: fadeInUp 0.8s ease-out 0.8s both;
+        }
+
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [redirectUserName, setRedirectUserName] = useState('');
   const [rootError, setRootError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginPin, setLoginPin] = useState("");
@@ -55,10 +215,9 @@ const Login = () => {
     clearErrors,
   } = useForm();
 
- 
   React.useEffect(() => {
     if (canUsePinLogin) {
-      setLoginPin(""); // clear pin input
+      setLoginPin("");
     }
   }, [canUsePinLogin]);
 
@@ -68,7 +227,6 @@ const Login = () => {
     setRootError('');
     clearErrors();
 
-    // Validation: email or phone
     const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
     const phonePattern = /^[0-9+\-\s()]{7,}$/;
     if (!emailPattern.test(data.emailOrPhone) && !phonePattern.test(data.emailOrPhone)) {
@@ -102,7 +260,15 @@ const Login = () => {
       localStorage.setItem("token", response.token);
       setAuthUser(response.user);
       localStorage.setItem("user", JSON.stringify(response.user));
-      navigate('/dashboard');
+
+      // Show redirect screen
+      setRedirectUserName(response.user?.fullname?.split(' ')[0] || 'User');
+      setIsRedirecting(true);
+
+      // Navigate after animation completes
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2500);
     } catch (err) {
       setRootError(
         err?.response?.data?.message ||
@@ -123,7 +289,7 @@ const Login = () => {
       setIsLoading(false);
       return;
     }
-    // Always get the latest user from localStorage
+
     const lastUser = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = lastUser.id || lastUser._id;
     if (!userId) {
@@ -143,7 +309,15 @@ const Login = () => {
       localStorage.setItem("token", response.token);
       setAuthUser(response.user);
       localStorage.setItem("user", JSON.stringify(response.user));
-      navigate('/dashboard');
+
+      // Show redirect screen
+      setRedirectUserName(response.user?.fullname?.split(' ')[0] || 'User');
+      setIsRedirecting(true);
+
+      // Navigate after animation completes
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 3500);
     } catch (err) {
       setPinError(
         err?.response?.data?.message ||
@@ -161,6 +335,11 @@ const Login = () => {
     navigate("/login");
   };
 
+  // Show loading redirect screen
+  if (isRedirecting) {
+    return <LoadingRedirect userName={redirectUserName} />;
+  }
+
   return (
     <div className="circlepay-login-page" style={{ paddingTop: '80px' }}>
       <div className="circlepay-login-card">
@@ -171,7 +350,7 @@ const Login = () => {
         <p className="circlepay-login-subtitle">
           {canUsePinLogin
             ? `Welcome back${lastUser?.fullname ? `, ${lastUser.fullname}` : ""}! Enter your login PIN.`
-            : "Access your account and invest in Nigeria’s top stocks."}
+            : "Access your account on circlepay Best Ajo platform."}
         </p>
         {!canUsePinLogin ? (
           <form onSubmit={handleSubmit(onSubmit)} className="circlepay-login-form">
