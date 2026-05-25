@@ -116,13 +116,14 @@ export default function Dashboard() {
     try {
 
       const token = localStorage.getItem("token");
-
-      const res = await fetch(`${API_URL}/api/groups/my-group`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+const res = await fetch(
+  `${API_URL}/api/groups/my-group/first`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
       const data = await res.json();
 
       if (res.ok && data.group) {

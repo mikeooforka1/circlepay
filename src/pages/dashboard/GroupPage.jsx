@@ -350,10 +350,20 @@ export default function GroupPage() {
             {/* Payout Schedule Tab */}
             {activeTab === "payout-schedule" && (
               <div>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-6 flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-yellow-300 mb-2 flex items-center gap-3">
                   <FaCalendarAlt className="text-yellow-400" />
                   Payout Schedule
                 </h2>
+
+                {/* Payout formula info */}
+                {group && (
+                  <div className="mb-6 p-4 rounded-xl bg-black/30 border border-yellow-400/15 text-yellow-200/60 text-xs leading-relaxed">
+                    <span className="text-yellow-400 font-semibold">How your payout is calculated: </span>
+                    {group.frequency === "Daily"
+                      ? `₦${group.contributionAmount?.toLocaleString()} (contribution) × ${group.members?.length} members × ${group.payoutDuration} days = ₦${(group.contributionAmount * group.members?.length * group.payoutDuration)?.toLocaleString()} per payout`
+                      : `₦${group.contributionAmount?.toLocaleString()} (contribution) × ${group.members?.length} members × ${group.payoutDuration / 7} week(s) = ₦${(group.contributionAmount * group.members?.length * (group.payoutDuration / 7))?.toLocaleString()} per payout`}
+                  </div>
+                )}
 
                 {payoutSchedule ? (
                   <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -372,7 +382,7 @@ export default function GroupPage() {
                               {schedule.recipientId?.fullname || "Loading..."}
                             </p>
                             <p className="text-yellow-200/60 text-xs">
-                              Payout Date:{" "}
+                              Cycle {schedule.cycleNumber} · Payout Date:{" "}
                               {new Date(schedule.payoutDate).toLocaleDateString()}
                             </p>
                           </div>

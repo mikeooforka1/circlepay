@@ -177,10 +177,17 @@ export default function JoinGroup() {
     }
   };
 
-  // ── Computed payout preview ────────────────────────────────────────────────
-  const estimatedPayout = selectedAmount && selectedSize
-    ? selectedAmount * selectedSize
-    : null;
+  // Correct payout formula:
+  //   Daily  → each of the payoutDuration days every member contributes once
+  //             payout = contributionAmount × members × payoutDuration
+  //   Weekly → each week every member contributes once; payoutDuration is in days
+  //             payout = contributionAmount × members × (payoutDuration / 7)
+  const estimatedPayout = (() => {
+    if (!selectedAmount || !selectedSize || !selectedFrequency || !selectedDuration) return null;
+    const contributionsPerCycle =
+      selectedFrequency === "Daily" ? selectedDuration : selectedDuration / 7;
+    return selectedAmount * selectedSize * contributionsPerCycle;
+  })();
 
   const cycleInfo = selectedDuration ? CYCLE_INFO[selectedDuration] : null;
 
@@ -490,11 +497,15 @@ export default function JoinGroup() {
                       <FaUsers className="text-yellow-300 text-3xl mb-4" />
                       <h3 className="text-2xl font-black text-yellow-200 mb-1">{label}</h3>
                       <p className="text-yellow-200/45 text-sm">{desc}</p>
-                      {selectedAmount && (
-                        <p className="text-yellow-400 font-bold text-sm mt-3">
-                          Payout ≈ {fmt(selectedAmount * size)}
-                        </p>
-                      )}
+                      {selectedAmount && selectedFrequency && selectedDuration && (() => {
+                        const contributionsPerCycle =
+                          selectedFrequency === "Daily" ? selectedDuration : selectedDuration / 7;
+                        return (
+                          <p className="text-yellow-400 font-bold text-sm mt-3">
+                            Payout ≈ {fmt(selectedAmount * size * contributionsPerCycle)}
+                          </p>
+                        );
+                      })()}
                     </button>
                   ))}
                 </div>
@@ -550,7 +561,9 @@ export default function JoinGroup() {
                     <p className="text-yellow-200/45 text-xs mb-1">Your Estimated Payout When It's Your Turn</p>
                     <p className="text-4xl font-black text-yellow-400">{fmt(estimatedPayout)}</p>
                     <p className="text-yellow-200/35 text-xs mt-1">
-                      ({fmt(selectedAmount)} × {selectedSize} members)
+                      {selectedFrequency === "Daily"
+                        ? `(${fmt(selectedAmount)} × ${selectedSize} members × ${selectedDuration} days)`
+                        : `(${fmt(selectedAmount)} × ${selectedSize} members × ${selectedDuration / 7} week${selectedDuration / 7 > 1 ? "s" : ""})`}
                     </p>
                   </div>
                 </div>
