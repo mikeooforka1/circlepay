@@ -5,7 +5,6 @@ import WelcomeGuideModal from "./components/WelcomeGuideModal";
 import FixedAccountModal from "./components/Fixedaccountmodal";
 import {
   FaUsers,
-  FaPlusCircle,
   FaArrowRight,
   FaEye,
   FaEyeSlash
@@ -206,72 +205,82 @@ export default function Dashboard() {
       />
 
       <div className="max-w-6xl mx-auto px-4 space-y-8">
-{/* WELCOME + BALANCE */}
-<div className="flex flex-row items-stretch gap-3">
+{/* WELCOME + BALANCE CARD */}
+<div className="rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/10 via-black to-yellow-900/10 p-4 md:p-6 shadow-xl backdrop-blur-sm hover:border-yellow-400/50 transition-all duration-300">
 
-  {/* WELCOME CARD */}
-  <div className="flex-1 rounded-xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/8 via-black to-yellow-900/10 p-3 md:p-4 shadow-lg backdrop-blur-sm hover:border-yellow-400/50 transition-colors duration-300">
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
 
-    <p className="text-yellow-300/60 text-[9px] md:text-xs font-semibold uppercase tracking-wider mb-1">
-      Welcome back
-    </p>
+    {/* LEFT SIDE */}
+    <div className="flex-1 min-w-0">
 
-    <h1 className="text-sm md:text-lg font-bold text-yellow-300 mb-0.5 truncate">
-      {user?.fullname || "User"}
-    </h1>
+      <p className="text-yellow-300/60 text-[10px] md:text-xs font-semibold uppercase tracking-wider mb-1">
+        Welcome back
+      </p>
 
-    <p className="text-yellow-200/60 text-[10px] md:text-xs leading-snug">
-      Manage ajo groups, wallet, contributions & savings
-    </p>
+      <h1 className="text-lg md:text-3xl font-black text-yellow-300 truncate">
+        {user?.fullname || "User"}
+      </h1>
 
-  </div>
+      <p className="text-yellow-200/60 text-xs md:text-sm mt-1 leading-relaxed max-w-md">
+        Manage ajo groups, wallet, contributions & savings easily from one dashboard.
+      </p>
 
-  {/* BALANCE CARD */}
-  <div className="w-[48%] sm:w-[44%] md:w-[280px] flex-shrink-0 rounded-xl border border-yellow-400/30 bg-gradient-to-br from-yellow-500/10 to-black/60 p-3 md:p-4 shadow-lg backdrop-blur-sm hover:border-yellow-400/50 transition-colors duration-300 flex flex-col justify-between overflow-hidden">
+    </div>
 
-    <p className="text-yellow-300/60 text-[8px] sm:text-[9px] md:text-xs font-semibold uppercase tracking-wider mb-2 truncate">
-      Wallet Balance
-    </p>
+    {/* RIGHT SIDE - BALANCE */}
+    <div className="w-full md:w-auto md:min-w-[280px] rounded-2xl border border-yellow-400/20 bg-black/30 p-4 md:p-5">
 
-    <div className="space-y-1">
+      <div className="flex items-start justify-between gap-3 mb-2">
 
-      <div className="flex items-center justify-between gap-1 w-full">
+        <div className="min-w-0">
 
-        <h2 className="text-xs sm:text-sm md:text-2xl font-black text-yellow-300 leading-tight truncate flex-1 overflow-hidden">
+          <p className="text-yellow-300/60 text-[10px] md:text-xs font-semibold uppercase tracking-wider mb-1">
+            Wallet Balance
+          </p>
 
-          {balanceLoading ? (
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-yellow-300 leading-tight truncate">
 
-            <span className="animate-pulse">...</span>
+            {balanceLoading ? (
 
-          ) : balanceVisible ? (
+              <span className="animate-pulse">...</span>
 
-            `₦${balance.toLocaleString()}`
+            ) : balanceVisible ? (
 
-          ) : (
+              `₦${balance.toLocaleString()}`
 
-            "••••••••"
-          )}
+            ) : (
 
-        </h2>
+              "••••••••"
+            )}
+
+          </h2>
+
+        </div>
 
         <button
-          onClick={() => setBalanceVisible(!balanceVisible)}
-          className="flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-lg hover:bg-yellow-400/15 transition flex-shrink-0"
-          title={balanceVisible ? "Hide balance" : "Show balance"}
+          onClick={() =>
+            setBalanceVisible(!balanceVisible)
+          }
+          className="flex items-center justify-center w-9 h-9 rounded-xl hover:bg-yellow-400/10 transition flex-shrink-0"
+          title={
+            balanceVisible
+              ? "Hide balance"
+              : "Show balance"
+          }
         >
 
           {balanceVisible ? (
 
             <FaEye
               className="text-yellow-400"
-              size={window.innerWidth < 768 ? 12 : 16}
+              size={16}
             />
 
           ) : (
 
             <FaEyeSlash
               className="text-yellow-400"
-              size={window.innerWidth < 768 ? 12 : 16}
+              size={16}
             />
 
           )}
@@ -280,7 +289,7 @@ export default function Dashboard() {
 
       </div>
 
-      <p className="text-yellow-200/50 text-[8px] sm:text-[9px] md:text-xs font-medium truncate">
+      <p className="text-yellow-200/50 text-xs md:text-sm font-medium">
         {formatDollar(balance)}
       </p>
 
@@ -289,7 +298,6 @@ export default function Dashboard() {
   </div>
 
 </div>
-
         {/* QUICK ACTIONS */}
 <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
 
@@ -445,36 +453,19 @@ export default function Dashboard() {
               No Group Yet
             </h3>
 
-            <p className="text-yellow-200/70 mb-6">
-              Join or create an ajo group
-              to start saving with others
+            <p className="text-yellow-200/70 mb-6 max-w-md mx-auto">
+              Join an ajo group to start saving with others. Browse available groups or use a code to join friends.
             </p>
 
-            <div className="flex flex-col md:flex-row gap-4">
-
-              <button
-                onClick={() =>
-                  navigate("/dashboard/create-group")
-                }
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold hover:scale-105 transition flex items-center justify-center gap-2"
-              >
-
-                <FaPlusCircle size={18} />
-
-                Create Group
-
-              </button>
-
-              <button
-                onClick={() =>
-                  navigate("/dashboard/join-group")
-                }
-                className="flex-1 py-3 rounded-xl border border-yellow-400/50 text-yellow-300 font-bold hover:bg-yellow-400/10 transition"
-              >
-                Join Group
-              </button>
-
-            </div>
+            <button
+              onClick={() =>
+                navigate("/dashboard/join-group")
+              }
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-black font-bold hover:scale-105 transition flex items-center justify-center gap-2 mx-auto"
+            >
+              Join Group
+              <FaArrowRight size={18} />
+            </button>
 
           </div>
 
