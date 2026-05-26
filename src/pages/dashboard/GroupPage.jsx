@@ -4,6 +4,11 @@ import { useNavigate } from "react-router-dom";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
+// Format currency
+function fmt(n) {
+  return `₦${Number(n).toLocaleString()}`;
+}
+
 export default function GroupPage() {
   const navigate = useNavigate();
   const [group, setGroup] = useState(null);
@@ -148,7 +153,7 @@ export default function GroupPage() {
                   </div>
                   <div className="flex items-center gap-2 text-yellow-200/70">
                     <FaMoneyBillWave className="text-yellow-400" />
-                    <span>₦{group.contributionAmount?.toLocaleString()}</span>
+                    <span>{fmt(group.contributionAmount)}</span>
                   </div>
                   <div className="flex items-center gap-2 text-yellow-200/70">
                     <FaClock className="text-yellow-400" />
@@ -185,7 +190,7 @@ export default function GroupPage() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Tabs */}
         <div className="flex gap-2 mb-8 border-b border-yellow-400/20">
           {["overview", "contributions", "payout-schedule", "activity"].map((tab) => (
             <button
@@ -195,71 +200,124 @@ export default function GroupPage() {
                 if (tab === "contributions") fetchContributions(group._id);
                 if (tab === "payout-schedule") fetchPayoutSchedule(group._id);
               }}
-              className={`px-4 py-3 font-semibold text-sm transition border-b-2 capitalize ${
+              className={`px-6 py-3 font-semibold transition border-b-2 ${
                 activeTab === tab
-                  ? "text-yellow-300 border-yellow-400"
-                  : "text-yellow-200/60 border-transparent hover:text-yellow-300"
+                  ? "border-yellow-400 text-yellow-300"
+                  : "border-transparent text-yellow-200/60 hover:text-yellow-300"
               }`}
             >
-              {tab.replace("-", " ")}
+              {tab === "overview" && "📊 Overview"}
+              {tab === "contributions" && "💰 Contributions"}
+              {tab === "payout-schedule" && "📅 Payout Schedule"}
+              {tab === "activity" && "📜 Activity"}
             </button>
           ))}
         </div>
 
         {/* Tab Content */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 via-yellow-500/5 to-orange-500/5 rounded-3xl blur-xl"></div>
+        <div className="rounded-2xl border border-yellow-400/20 bg-black/40 p-8">
+          {/* Overview Tab */}
+          {activeTab === "overview" && (
+            <div>
+              <h2 className="text-2xl font-bold text-yellow-300 mb-6">Group Overview</h2>
 
-          <div className="relative bg-gradient-to-br from-yellow-900/10 via-black/40 to-yellow-900/5 backdrop-blur-xl border border-yellow-400/20 rounded-3xl p-8 md:p-10 shadow-xl">
-            {/* Overview Tab */}
-            {activeTab === "overview" && (
-              <div>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-6 flex items-center gap-3">
-                  <FaCheckCircle className="text-yellow-400" />
-                  Group Overview
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {/* Members */}
-                  <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-2xl p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {/* Left Column */}
+                <div className="space-y-6">
+                  {/* Group Status */}
+                  <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-6">
                     <h3 className="text-yellow-300 font-bold mb-4 flex items-center gap-2">
-                      <FaUsers className="text-yellow-400" />
-                      Members ({group.members?.length || 0})
+                      <FaCheckCircle /> Group Status
                     </h3>
-                    <div className="space-y-2">
-                      {group.members?.map((member, idx) => (
-                        <div
-                          key={member._id}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-black/40 hover:bg-black/60 transition"
-                        >
-                          {member.avatar_url && (
-                            <img
-                              src={member.avatar_url}
-                              alt={member.fullname}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <p className="text-yellow-300 font-semibold text-sm">
-                              {member.fullname}
-                            </p>
-                            <p className="text-yellow-200/50 text-xs">@{member.username}</p>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-yellow-200/60">Status</span>
+                        <span className="text-yellow-300 font-semibold capitalize">
+                          {group.status}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-yellow-200/60">Frequency</span>
+                        <span className="text-yellow-300 font-semibold">
+                          {group.frequency}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-yellow-200/60">Contribution</span>
+                        <span className="text-yellow-300 font-semibold">
+                          {fmt(group.contributionAmount)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-yellow-200/60">Cycle Duration</span>
+                        <span className="text-yellow-300 font-semibold">
+                          {group.payoutDuration} days
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Group Info */}
-                  <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-2xl p-6">
-                    <h3 className="text-yellow-300 font-bold mb-4">Group Details</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-yellow-200/60 text-sm mb-1">Status</p>
-                        <p className="text-yellow-300 font-semibold capitalize">
-                          {group.status || "Active"}
-                        </p>
+                  {/* Members */}
+                  <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-6">
+                    <h3 className="text-yellow-300 font-bold mb-4 flex items-center gap-2">
+                      <FaUsers /> Members ({group.members?.length || 0}/{group.maxMembers})
+                    </h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {group.members && group.members.length > 0 ? (
+                        group.members.map((member, idx) => (
+                          <div key={idx} className="text-yellow-300 text-sm p-2 rounded bg-black/30">
+                            {member.fullname || member.username}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-yellow-200/60 text-sm">No members yet</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-6">
+                  {/* Next Payout */}
+                  <div className="bg-gradient-to-br from-green-900/30 to-black/40 border border-green-400/20 rounded-xl p-6">
+                    <h3 className="text-green-300 font-bold mb-4 flex items-center gap-2">
+                      <FaClock /> Next Payout
+                    </h3>
+                    {group.nextPayoutMemberId ? (
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-yellow-200/60 text-sm mb-1">Recipient</p>
+                          <p className="text-green-300 font-semibold text-lg">
+                            {group.nextPayoutMemberId.fullname ||
+                              group.nextPayoutMemberId.username}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-yellow-200/60 text-sm mb-1">Payout Date</p>
+                          <p className="text-green-300 font-semibold">
+                            {group.nextPayoutDate
+                              ? new Date(group.nextPayoutDate).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    weekday: "short",
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                  }
+                                )
+                              : "TBD"}
+                          </p>
+                        </div>
                       </div>
+                    ) : (
+                      <p className="text-yellow-200/60 text-sm">No payout scheduled yet</p>
+                    )}
+                  </div>
+
+                  {/* Dates */}
+                  <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-6">
+                    <h3 className="text-yellow-300 font-bold mb-4">Dates</h3>
+                    <div className="space-y-3">
                       <div>
                         <p className="text-yellow-200/60 text-sm mb-1">Created</p>
                         <p className="text-yellow-300 font-semibold">
@@ -280,177 +338,219 @@ export default function GroupPage() {
                   </div>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Contributions Tab */}
-            {activeTab === "contributions" && (
-              <div>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-6 flex items-center gap-3">
-                  <FaMoneyBillWave className="text-yellow-400" />
-                  Contributions
-                </h2>
+          {/* Contributions Tab */}
+          {activeTab === "contributions" && (
+            <div>
+              <h2 className="text-2xl font-bold text-yellow-300 mb-6 flex items-center gap-3">
+                <FaMoneyBillWave className="text-yellow-400" />
+                Contributions
+              </h2>
 
-                {contributions ? (
-                  <div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                      <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-4">
-                        <p className="text-yellow-200/60 text-sm mb-2">Total Contributions</p>
-                        <p className="text-3xl font-black text-yellow-400">
-                          {contributions.totalContributions}
-                        </p>
-                      </div>
-                      <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-4">
-                        <p className="text-yellow-200/60 text-sm mb-2">Total Amount</p>
-                        <p className="text-3xl font-black text-yellow-400">
-                          ₦{contributions.totalAmount?.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-4">
-                        <p className="text-yellow-200/60 text-sm mb-2">Average</p>
-                        <p className="text-3xl font-black text-yellow-400">
-                          ₦{contributions.averageContribution?.toLocaleString()}
-                        </p>
-                      </div>
+              {contributions ? (
+                <div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-4">
+                      <p className="text-yellow-200/60 text-sm mb-2">Total Contributions</p>
+                      <p className="text-3xl font-black text-yellow-400">
+                        {contributions.totalContributions}
+                      </p>
                     </div>
+                    <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-4">
+                      <p className="text-yellow-200/60 text-sm mb-2">Total Amount</p>
+                      <p className="text-3xl font-black text-yellow-400">
+                        {fmt(contributions.totalAmount)}
+                      </p>
+                    </div>
+                    <div className="bg-yellow-900/20 border border-yellow-400/20 rounded-xl p-4">
+                      <p className="text-yellow-200/60 text-sm mb-2">Average</p>
+                      <p className="text-3xl font-black text-yellow-400">
+                        {fmt(contributions.averageContribution)}
+                      </p>
+                    </div>
+                  </div>
 
-                    <div className="bg-black/40 rounded-xl p-4 max-h-96 overflow-y-auto">
-                      <h3 className="text-yellow-300 font-bold mb-3">By Member</h3>
-                      <div className="space-y-2">
-                        {Object.entries(contributions.contributionsByMember).map(
-                          ([memberId, stats]) => (
-                            <div
-                              key={memberId}
-                              className="flex items-center justify-between p-3 rounded-lg bg-yellow-900/10 hover:bg-yellow-900/20 transition"
-                            >
-                              <div>
-                                <p className="text-yellow-300 font-semibold text-sm">
-                                  {stats.fullname}
-                                </p>
-                                <p className="text-yellow-200/50 text-xs">
-                                  {stats.count} contribution(s)
-                                </p>
-                              </div>
-                              <p className="text-yellow-400 font-bold">
-                                ₦{stats.total?.toLocaleString()}
+                  <div className="bg-black/40 rounded-xl p-4 max-h-96 overflow-y-auto">
+                    <h3 className="text-yellow-300 font-bold mb-3">By Member</h3>
+                    <div className="space-y-2">
+                      {Object.entries(contributions.contributionsByMember).map(
+                        ([memberId, stats]) => (
+                          <div
+                            key={memberId}
+                            className="flex items-center justify-between p-3 rounded-lg bg-yellow-900/10 hover:bg-yellow-900/20 transition"
+                          >
+                            <div>
+                              <p className="text-yellow-300 font-semibold text-sm">
+                                {stats.fullname}
+                              </p>
+                              <p className="text-yellow-200/50 text-xs">
+                                {stats.count} contribution(s)
                               </p>
                             </div>
-                          )
-                        )}
-                      </div>
+                            <p className="text-yellow-400 font-bold">
+                              {fmt(stats.total)}
+                            </p>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <p className="text-yellow-200/70 text-center py-8">
-                    Loading contributions...
-                  </p>
-                )}
-              </div>
-            )}
+                </div>
+              ) : (
+                <p className="text-yellow-200/70 text-center py-8">
+                  Loading contributions...
+                </p>
+              )}
+            </div>
+          )}
 
-            {/* Payout Schedule Tab */}
-            {activeTab === "payout-schedule" && (
-              <div>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-2 flex items-center gap-3">
-                  <FaCalendarAlt className="text-yellow-400" />
-                  Payout Schedule
-                </h2>
+          {/* Payout Schedule Tab */}
+          {activeTab === "payout-schedule" && (
+            <div>
+              <h2 className="text-2xl font-bold text-yellow-300 mb-6 flex items-center gap-3">
+                <FaCalendarAlt className="text-yellow-400" />
+                Payout Schedule
+              </h2>
 
-                {/* Payout formula info */}
-                {group && (
-                  <div className="mb-6 p-4 rounded-xl bg-black/30 border border-yellow-400/15 text-yellow-200/60 text-xs leading-relaxed">
-                    <span className="text-yellow-400 font-semibold">How your payout is calculated: </span>
-                    {group.frequency === "Daily"
-                      ? `₦${group.contributionAmount?.toLocaleString()} (contribution) × ${group.members?.length} members × ${group.payoutDuration} days = ₦${(group.contributionAmount * group.members?.length * group.payoutDuration)?.toLocaleString()} per payout`
-                      : `₦${group.contributionAmount?.toLocaleString()} (contribution) × ${group.members?.length} members × ${group.payoutDuration / 7} week(s) = ₦${(group.contributionAmount * group.members?.length * (group.payoutDuration / 7))?.toLocaleString()} per payout`}
-                  </div>
-                )}
-
-                {payoutSchedule ? (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {payoutSchedule.payoutSchedule?.map((schedule, idx) => (
-                      <div
-                        key={idx}
-                        className={`p-4 rounded-xl border transition ${
-                          schedule.status === "completed"
-                            ? "bg-green-900/10 border-green-400/20"
-                            : "bg-yellow-900/10 border-yellow-400/20"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-yellow-300 font-semibold">
-                              {schedule.recipientId?.fullname || "Loading..."}
-                            </p>
-                            <p className="text-yellow-200/60 text-xs">
-                              Cycle {schedule.cycleNumber} · Payout Date:{" "}
-                              {new Date(schedule.payoutDate).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-yellow-400 font-bold">
-                              ₦{schedule.totalAmount?.toLocaleString()}
-                            </p>
-                            <p
-                              className={`text-xs font-semibold capitalize ${
-                                schedule.status === "completed"
-                                  ? "text-green-400"
-                                  : "text-yellow-400"
-                              }`}
-                            >
-                              {schedule.status}
-                            </p>
-                          </div>
+              {payoutSchedule ? (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {payoutSchedule.payoutSchedule?.map((schedule, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-xl border transition ${
+                        schedule.status === "completed"
+                          ? "bg-green-900/10 border-green-400/20"
+                          : "bg-yellow-900/10 border-yellow-400/20"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <p className="text-yellow-300 font-semibold">
+                            {schedule.recipientId?.fullname || "Loading..."}
+                          </p>
+                          <p className="text-yellow-200/60 text-xs">
+                            Payout Date:{" "}
+                            {new Date(schedule.payoutDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div
+                          className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                            schedule.status === "completed"
+                              ? "bg-green-500/20 text-green-400"
+                              : "bg-yellow-500/20 text-yellow-400"
+                          }`}
+                        >
+                          {schedule.status}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-yellow-200/70 text-center py-8">
-                    Loading payout schedule...
-                  </p>
-                )}
-              </div>
-            )}
 
-            {/* Activity Tab */}
-            {activeTab === "activity" && (
-              <div>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-6 flex items-center gap-3">
-                  <FaHistory className="text-yellow-400" />
-                  Group Activity
-                </h2>
-
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {group.activities && group.activities.length > 0 ? (
-                    group.activities.map((activity, idx) => (
-                      <div
-                        key={idx}
-                        className="p-4 rounded-xl bg-yellow-900/10 border border-yellow-400/20 hover:bg-yellow-900/20 transition"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="text-yellow-300 font-semibold">
-                              {activity.title}
-                            </p>
-                            <p className="text-yellow-200/70 text-sm mt-1">
-                              {activity.description}
-                            </p>
-                          </div>
-                          <p className="text-yellow-200/50 text-xs whitespace-nowrap">
-                            {new Date(activity.date).toLocaleDateString()}
+                      <div className="grid grid-cols-2 gap-4 p-3 bg-black/30 rounded-lg">
+                        <div>
+                          <p className="text-yellow-200/60 text-xs mb-1">
+                            Current Amount
+                          </p>
+                          <p className="text-yellow-300 font-bold">
+                            {fmt(schedule.totalAmount)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-yellow-200/60 text-xs mb-1">
+                            Expected Amount
+                          </p>
+                          <p className="text-green-400 font-bold">
+                            {fmt(schedule.expectedPayoutAmount || 0)}
                           </p>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-yellow-200/70 text-center py-8">
-                      No activities yet
-                    </p>
-                  )}
+
+                      {/* Progress bar */}
+                      <div className="mt-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="text-yellow-200/60 text-xs">Progress</p>
+                          <p className="text-yellow-300 text-xs font-semibold">
+                            {schedule.expectedPayoutAmount > 0
+                              ? Math.round(
+                                  (schedule.totalAmount /
+                                    schedule.expectedPayoutAmount) *
+                                    100
+                                )
+                              : 0}
+                            %
+                          </p>
+                        </div>
+                        <div className="w-full bg-black/60 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              schedule.status === "completed"
+                                ? "bg-green-500"
+                                : "bg-yellow-500"
+                            }`}
+                            style={{
+                              width: `${
+                                schedule.expectedPayoutAmount > 0
+                                  ? Math.min(
+                                      (schedule.totalAmount /
+                                        schedule.expectedPayoutAmount) *
+                                        100,
+                                      100
+                                    )
+                                  : 0
+                              }%`,
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              ) : (
+                <p className="text-yellow-200/70 text-center py-8">
+                  Loading payout schedule...
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Activity Tab */}
+          {activeTab === "activity" && (
+            <div>
+              <h2 className="text-2xl font-bold text-yellow-300 mb-6 flex items-center gap-3">
+                <FaHistory className="text-yellow-400" />
+                Group Activity
+              </h2>
+
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {group.activities && group.activities.length > 0 ? (
+                  group.activities.map((activity, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-xl bg-yellow-900/10 border border-yellow-400/20 hover:bg-yellow-900/20 transition"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-yellow-300 font-semibold">
+                            {activity.title}
+                          </p>
+                          <p className="text-yellow-200/70 text-sm mt-1">
+                            {activity.description}
+                          </p>
+                        </div>
+                        <p className="text-yellow-200/50 text-xs whitespace-nowrap">
+                          {new Date(activity.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-yellow-200/70 text-center py-8">
+                    No activities yet
+                  </p>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </main>

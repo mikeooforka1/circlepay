@@ -31,6 +31,7 @@ import ForgotPassword from "./pages/forgot-password.jsx"; // <-- Import the Forg
 import CreateGroup from "./pages/dashboard/CreateGroup";
 import JoinGroup from "./pages/dashboard/JoinGroup";
 import GroupPage from "./pages/dashboard/GroupPage";
+import Contribute from "./pages/dashboard/Contribute";
 
 function AppRoutes() {
   const location = useLocation();
@@ -62,6 +63,7 @@ const hideFooterRoutes = [
   "/dashboard/create-group",
   "/dashboard/join-group",
   "/dashboard/group",
+  "/dashboard/contribute",
 ];
 
 const showFooter = !hideFooterRoutes.some(route =>
@@ -96,6 +98,7 @@ const showFooter = !hideFooterRoutes.some(route =>
       <Route path="/dashboard/create-group" element={<CreateGroup />} />
       <Route path="/dashboard/join-group" element={<JoinGroup />} />
       <Route path="/dashboard/group" element={<GroupPage />} />
+      <Route path="/dashboard/contribute" element={<Contribute />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </main>

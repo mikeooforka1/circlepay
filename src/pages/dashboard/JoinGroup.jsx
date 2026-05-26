@@ -72,6 +72,33 @@ function fmt(n) {
   return `₦${Number(n).toLocaleString()}`;
 }
 
+/**
+ * Calculate estimated payout based on frequency and cycle
+ * LOGIC:
+ * - Daily: Each day, all members contribute → Daily total = contributionAmount × memberCount
+ *          Over the cycle duration (7/14/21 days), total payout = daily total × cycle duration
+ * - Weekly: Each week, all members contribute once → Weekly total = contributionAmount × memberCount
+ *           Over the cycle duration (7/14/21 days = 1/2/3 weeks), total payout = weekly total × weeks
+ */
+function calculateEstimatedPayout(frequency, cycleLength, contributionAmount, memberCount) {
+  if (!frequency || !cycleLength || !contributionAmount || !memberCount) return 0;
+
+  if (frequency === "Daily") {
+    // Daily contribution: each day all members contribute
+    const dailyTotal = contributionAmount * memberCount;
+    const totalPayout = dailyTotal * cycleLength; // multiply by number of days
+    return totalPayout;
+  } else if (frequency === "Weekly") {
+    // Weekly contribution: once per week all members contribute
+    const weeklyTotal = contributionAmount * memberCount;
+    const numWeeks = cycleLength / 7; // convert days to weeks
+    const totalPayout = weeklyTotal * numWeeks;
+    return totalPayout;
+  }
+
+  return 0;
+}
+
 // ─── Step Indicator ──────────────────────────────────────────────────────────
 function StepBar({ current, total }) {
   return (
@@ -116,6 +143,14 @@ export default function JoinGroup() {
 
   // Clear error on any selection change
   useEffect(() => { setError(""); }, [selectedDuration, selectedAmount, selectedFrequency, selectedSize, groupCode]);
+
+  // Calculate estimated payout whenever selections change
+  const estimatedPayout = calculateEstimatedPayout(
+    selectedFrequency,
+    selectedDuration,
+    selectedAmount,
+    selectedSize
+  );
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleJoinByCode = async (e) => {
@@ -177,423 +212,349 @@ export default function JoinGroup() {
     }
   };
 
-  // Correct payout formula:
-  //   Daily  → each of the payoutDuration days every member contributes once
-  //             payout = contributionAmount × members × payoutDuration
-  //   Weekly → each week every member contributes once; payoutDuration is in days
-  //             payout = contributionAmount × members × (payoutDuration / 7)
-  const estimatedPayout = (() => {
-    if (!selectedAmount || !selectedSize || !selectedFrequency || !selectedDuration) return null;
-    const contributionsPerCycle =
-      selectedFrequency === "Daily" ? selectedDuration : selectedDuration / 7;
-    return selectedAmount * selectedSize * contributionsPerCycle;
-  })();
-
-  const cycleInfo = selectedDuration ? CYCLE_INFO[selectedDuration] : null;
-
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── JSX ────────────────────────────────────────────────────────────────────
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-950 via-black to-gray-950 text-yellow-100 pt-24 pb-16 px-4">
+    <main className="min-h-screen pt-28 pb-10 px-4 bg-gradient-to-br from-[#10141a] via-[#0f1419] to-[#1a1f2e]">
       <div className="max-w-4xl mx-auto">
-
-        {/* Back */}
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-8 text-sm font-medium"
-        >
-          <FaArrowLeft size={13} /> Back to Dashboard
-        </button>
-
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-black text-yellow-300 tracking-tight mb-3">
-            Join an Ajo Group
-          </h1>
-          <p className="text-yellow-200/60 text-base max-w-xl mx-auto">
-            Save together, win together. Choose how you'd like to join a savings group.
-          </p>
-        </div>
-
-        {/* Global messages */}
+        {/* Error banner */}
         {error && (
-          <div className="mb-6 px-5 py-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm flex items-start gap-3">
-            <span className="mt-0.5">⚠️</span> {error}
+          <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 rounded-xl text-red-300 text-sm">
+            {error}
           </div>
         )}
+
+        {/* Success banner */}
         {success && (
-          <div className="mb-6 px-5 py-4 rounded-xl bg-green-500/10 border border-green-500/30 text-green-300 text-sm flex items-start gap-3">
-            <FaCheckCircle className="mt-0.5 shrink-0" /> {success}
+          <div className="text-center py-10">
+            <div className="text-6xl mb-4">🎉</div>
+            <p className="text-yellow-300 text-xl font-bold">{success}</p>
           </div>
         )}
 
-        {/* ── Mode Selection ─────────────────────────────────────────── */}
-        {!joinMode && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Browse system groups */}
-            <button
-              onClick={() => setJoinMode("browse")}
-              className="group text-left rounded-2xl border-2 border-yellow-400/30 bg-gradient-to-br from-yellow-900/10 to-black/50 p-8 hover:border-yellow-400/60 hover:bg-yellow-900/20 transition-all duration-200"
-            >
-              <div className="text-4xl mb-4">🏦</div>
-              <h2 className="text-xl font-bold text-yellow-300 mb-2 flex items-center gap-2">
-                Browse System Groups
-                <FaChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition" />
-              </h2>
-              <p className="text-yellow-200/60 text-sm leading-relaxed">
-                Pick your preferences — cycle length, amount, frequency, and group size. We'll match you to an available group or create one for you.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="text-xs px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300">⚡ Auto-matched</span>
-                <span className="text-xs px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300">🛡️ Secure</span>
-                <span className="text-xs px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300">✓ Fair rotation</span>
-              </div>
-            </button>
-
-            {/* Join by code */}
-            <button
-              onClick={() => setJoinMode("code")}
-              className="group text-left rounded-2xl border-2 border-yellow-400/30 bg-gradient-to-br from-yellow-900/10 to-black/50 p-8 hover:border-yellow-400/60 hover:bg-yellow-900/20 transition-all duration-200"
-            >
-              <div className="text-4xl mb-4">🔑</div>
-              <h2 className="text-xl font-bold text-yellow-300 mb-2 flex items-center gap-2">
-                Join with Group Code
-                <FaChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition" />
-              </h2>
-              <p className="text-yellow-200/60 text-sm leading-relaxed">
-                Already have a group code from a friend or family member? Enter it here to join their specific group directly.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="text-xs px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300">🔐 Code required</span>
-                <span className="text-xs px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300">👥 Join friends</span>
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* ── Join by Code Flow ──────────────────────────────────────── */}
-        {joinMode === "code" && (
-          <div className="rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-900/10 to-black/50 p-8 md:p-12">
-            <button
-              onClick={() => { setJoinMode(null); setGroupCode(""); setError(""); }}
-              className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-8 text-sm"
-            >
-              <FaArrowLeft size={12} /> Change method
-            </button>
-
-            <h2 className="text-2xl font-bold text-yellow-300 mb-2 flex items-center gap-3">
-              <FaCode /> Enter Your Group Code
-            </h2>
-            <p className="text-yellow-200/50 text-sm mb-8">
-              Ask the group creator or a current member for the 6-character code.
-            </p>
-
-            <form onSubmit={handleJoinByCode} className="space-y-6 max-w-sm mx-auto">
+        {/* Main content */}
+        {!success && (
+          <div>
+            {/* Join Mode Selection */}
+            {joinMode === null && (
               <div>
-                <label className="block text-yellow-300 font-semibold mb-2 text-sm">Group Code</label>
-                <input
-                  type="text"
-                  value={groupCode}
-                  onChange={(e) => setGroupCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
-                  placeholder="e.g. AJ72XK"
-                  maxLength={6}
-                  className="w-full px-6 py-5 rounded-xl bg-black/40 border-2 border-yellow-400/30 focus:border-yellow-400 text-yellow-300 placeholder-yellow-200/25 outline-none transition text-center text-3xl tracking-[0.4em] font-bold uppercase"
-                />
-                <p className="text-yellow-200/40 text-xs mt-2 text-center">6-character alphanumeric code</p>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || groupCode.length < 6}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold text-base hover:shadow-lg hover:shadow-yellow-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                    </svg>
-                    Joining...
-                  </span>
-                ) : "Join This Group"}
-              </button>
-            </form>
-
-            <div className="mt-8 p-4 rounded-xl bg-black/30 border border-yellow-400/10 flex gap-3 items-start max-w-sm mx-auto">
-              <FaLightbulb className="text-yellow-400 mt-0.5 shrink-0" />
-              <p className="text-yellow-200/50 text-xs leading-relaxed">
-                Each group has a unique code. You cannot join a group you're already a member of.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Browse / Step Flow ─────────────────────────────────────── */}
-        {joinMode === "browse" && (
-          <div className="rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-900/10 to-black/50 p-8 md:p-12">
-            {/* Back to mode select */}
-            {step === 0 && (
-              <button
-                onClick={() => { setJoinMode(null); setError(""); }}
-                className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-8 text-sm"
-              >
-                <FaArrowLeft size={12} /> Change method
-              </button>
-            )}
-
-            <StepBar current={step} total={5} />
-
-            {/* ── STEP 0: Choose Payout Cycle ── */}
-            {step === 0 && (
-              <div>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-1 flex items-center gap-3">
-                  <FaClock /> Choose Payout Cycle
-                </h2>
-                <p className="text-yellow-200/50 text-sm mb-8">
-                  This sets how often the group's payout rotates to the next member.
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  {[7, 14, 21].map((dur) => {
-                    const info = CYCLE_INFO[dur];
-                    return (
-                      <button
-                        key={dur}
-                        onClick={() => { setSelectedDuration(dur); setStep(1); }}
-                        className={`text-left rounded-2xl border-2 p-6 transition-all duration-200 hover:scale-[1.02] bg-gradient-to-br ${info.gradient} ${
-                          selectedDuration === dur ? info.activeBorder : info.border
-                        } hover:${info.activeBorder}`}
-                      >
-                        <div className="text-2xl mb-3">{info.icon}</div>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${info.badgeBg} mb-3 inline-block`}>
-                          {info.badge}
-                        </span>
-                        <h3 className="text-lg font-bold text-yellow-200 mb-1">{info.label}</h3>
-                        <p className="text-yellow-200/50 text-xs leading-relaxed">{info.tagline}</p>
-                        <p className="text-yellow-200/35 text-xs mt-3 italic">{info.tip}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* ── STEP 1: Choose Contribution Amount ── */}
-            {step === 1 && (
-              <div>
-                <button onClick={() => setStep(0)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
-                  <FaArrowLeft size={12} /> Back
+                <button onClick={() => navigate("/dashboard")} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-8 text-sm">
+                  <FaArrowLeft size={12} /> Back to Dashboard
                 </button>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-1 flex items-center gap-3">
-                  <FaMoneyBillWave /> Choose Contribution Amount
-                </h2>
-                <p className="text-yellow-200/50 text-sm mb-2">
-                  How much will each member contribute per cycle?
-                </p>
-                {cycleInfo && (
-                  <div className={`inline-flex items-center gap-2 text-xs px-3 py-1 rounded-full mb-8 ${cycleInfo.badgeBg}`}>
-                    {cycleInfo.icon} {cycleInfo.label} selected
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {CONTRIBUTION_AMOUNTS.map((amt) => (
-                    <button
-                      key={amt}
-                      onClick={() => { setSelectedAmount(amt); setStep(2); }}
-                      className={`rounded-xl border-2 p-5 text-center transition-all hover:scale-[1.03] ${
-                        selectedAmount === amt
-                          ? "border-yellow-400 bg-yellow-900/30"
-                          : "border-yellow-400/25 bg-black/30 hover:border-yellow-400/50"
-                      }`}
-                    >
-                      <p className="text-2xl font-black text-yellow-300">{fmt(amt)}</p>
-                      <p className="text-yellow-200/40 text-xs mt-1">per cycle</p>
-                    </button>
-                  ))}
-                </div>
-
-                <p className="text-yellow-200/35 text-xs mt-6 flex items-center gap-2">
-                  <FaLightbulb className="text-yellow-400" />
-                  Min ₦1,000 · Max ₦10,000 — you'll receive the total pooled from all members.
-                </p>
-              </div>
-            )}
-
-            {/* ── STEP 2: Choose Contribution Frequency ── */}
-            {step === 2 && (
-              <div>
-                <button onClick={() => setStep(1)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
-                  <FaArrowLeft size={12} /> Back
-                </button>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-1 flex items-center gap-3">
-                  <FaCalendarAlt /> Contribution Frequency
-                </h2>
-                <p className="text-yellow-200/50 text-sm mb-8">
-                  How often will each member make their contribution?
+                <h1 className="text-4xl font-black text-yellow-300 mb-2">Join an Ajo Group</h1>
+                <p className="text-yellow-200/60 mb-12 text-lg">
+                  Save with a trusted community. Every {" "}
+                  <span className="text-yellow-300 font-semibold">7, 14, or 21 days</span>, one member gets the full payout!
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {[
-                    {
-                      key: "Daily",
-                      icon: "☀️",
-                      title: "Daily",
-                      desc: "Contribute a small amount every day. Builds discipline and keeps you consistent.",
-                      badge: "Every Day",
-                    },
-                    {
-                      key: "Weekly",
-                      icon: "📅",
-                      title: "Weekly",
-                      desc: "Contribute once per week. Great for people with a regular income schedule.",
-                      badge: "Once a Week",
-                    },
-                  ].map((freq) => (
-                    <button
-                      key={freq.key}
-                      onClick={() => { setSelectedFrequency(freq.key); setStep(3); }}
-                      className={`text-left rounded-2xl border-2 p-7 transition-all hover:scale-[1.02] ${
-                        selectedFrequency === freq.key
-                          ? "border-yellow-400 bg-yellow-900/25"
-                          : "border-yellow-400/25 bg-black/30 hover:border-yellow-400/50"
-                      }`}
-                    >
-                      <div className="text-4xl mb-4">{freq.icon}</div>
-                      <span className="text-xs font-semibold px-3 py-1 rounded-full bg-yellow-400/15 text-yellow-300 mb-3 inline-block">
-                        {freq.badge}
-                      </span>
-                      <h3 className="text-xl font-bold text-yellow-200 mb-2">{freq.title}</h3>
-                      <p className="text-yellow-200/50 text-sm leading-relaxed">{freq.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── STEP 3: Choose Group Size ── */}
-            {step === 3 && (
-              <div>
-                <button onClick={() => setStep(2)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
-                  <FaArrowLeft size={12} /> Back
-                </button>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-1 flex items-center gap-3">
-                  <FaUsers /> Choose Group Size
-                </h2>
-                <p className="text-yellow-200/50 text-sm mb-8">
-                  How many members should be in your group? More members = bigger payout for each person's turn.
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  {GROUP_SIZES.map(({ size, label, desc }) => (
-                    <button
-                      key={size}
-                      onClick={() => { setSelectedSize(size); setStep(4); }}
-                      className={`text-left rounded-2xl border-2 p-6 transition-all hover:scale-[1.02] ${
-                        selectedSize === size
-                          ? "border-yellow-400 bg-yellow-900/25"
-                          : "border-yellow-400/25 bg-black/30 hover:border-yellow-400/50"
-                      }`}
-                    >
-                      <FaUsers className="text-yellow-300 text-3xl mb-4" />
-                      <h3 className="text-2xl font-black text-yellow-200 mb-1">{label}</h3>
-                      <p className="text-yellow-200/45 text-sm">{desc}</p>
-                      {selectedAmount && selectedFrequency && selectedDuration && (() => {
-                        const contributionsPerCycle =
-                          selectedFrequency === "Daily" ? selectedDuration : selectedDuration / 7;
-                        return (
-                          <p className="text-yellow-400 font-bold text-sm mt-3">
-                            Payout ≈ {fmt(selectedAmount * size * contributionsPerCycle)}
-                          </p>
-                        );
-                      })()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── STEP 4: Review & Confirm ── */}
-            {step === 4 && selectedDuration && selectedAmount && selectedFrequency && selectedSize && (
-              <div>
-                <button onClick={() => setStep(3)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
-                  <FaArrowLeft size={12} /> Back
-                </button>
-                <h2 className="text-2xl font-bold text-yellow-300 mb-1">Review Your Choices</h2>
-                <p className="text-yellow-200/50 text-sm mb-8">
-                  Double-check everything before joining. You'll be matched to an available group or a new one will be created for you.
-                </p>
-
-                {/* Summary card */}
-                <div className={`rounded-2xl border-2 bg-gradient-to-br ${CYCLE_INFO[selectedDuration].gradient} ${CYCLE_INFO[selectedDuration].border} p-7 mb-6`}>
-                  {/* Category banner */}
-                  <div className="flex items-center gap-3 mb-6 pb-5 border-b border-yellow-400/10">
-                    <div className="text-3xl">{CYCLE_INFO[selectedDuration].icon}</div>
-                    <div>
-                      <p className="font-bold text-yellow-200 text-lg">{CYCLE_INFO[selectedDuration].label}</p>
-                      <p className="text-yellow-200/50 text-sm">{CYCLE_INFO[selectedDuration].tagline}</p>
-                    </div>
-                    <span className={`ml-auto text-xs font-bold px-3 py-1 rounded-full ${CYCLE_INFO[selectedDuration].badgeBg}`}>
-                      {CYCLE_INFO[selectedDuration].badge}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-                    <div className="text-center">
-                      <p className="text-yellow-200/45 text-xs mb-1">Payout Cycle</p>
-                      <p className="text-yellow-300 font-black text-xl">{selectedDuration} days</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-yellow-200/45 text-xs mb-1">Your Contribution</p>
-                      <p className="text-yellow-300 font-black text-xl">{fmt(selectedAmount)}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-yellow-200/45 text-xs mb-1">Frequency</p>
-                      <p className="text-yellow-300 font-black text-xl">{selectedFrequency}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-yellow-200/45 text-xs mb-1">Group Size</p>
-                      <p className="text-yellow-300 font-black text-xl">{selectedSize} members</p>
-                    </div>
-                  </div>
-
-                  {/* Estimated payout highlight */}
-                  <div className="mt-6 pt-5 border-t border-yellow-400/10 text-center">
-                    <p className="text-yellow-200/45 text-xs mb-1">Your Estimated Payout When It's Your Turn</p>
-                    <p className="text-4xl font-black text-yellow-400">{fmt(estimatedPayout)}</p>
-                    <p className="text-yellow-200/35 text-xs mt-1">
-                      {selectedFrequency === "Daily"
-                        ? `(${fmt(selectedAmount)} × ${selectedSize} members × ${selectedDuration} days)`
-                        : `(${fmt(selectedAmount)} × ${selectedSize} members × ${selectedDuration / 7} week${selectedDuration / 7 > 1 ? "s" : ""})`}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Notice */}
-                <div className="mb-6 p-4 rounded-xl bg-black/40 border border-yellow-400/15 flex gap-3 items-start">
-                  <FaLightbulb className="text-yellow-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-yellow-300 text-sm font-semibold mb-1">How It Works</p>
-                    <p className="text-yellow-200/50 text-xs leading-relaxed">
-                      You'll be matched to an available system group with these exact settings. If no group has space, a new one will be created automatically. Each group has a unique code you can share. You cannot join the same group twice.
-                    </p>
-                  </div>
-                </div>
-
-                {loading ? (
-                  <div className="flex items-center justify-center gap-3 py-6 text-yellow-300">
-                    <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                    </svg>
-                    Matching you to a group...
-                  </div>
-                ) : (
                   <button
-                    onClick={handleJoinAvailable}
-                    className="w-full py-5 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-black text-lg hover:shadow-xl hover:shadow-yellow-500/30 transition transform hover:scale-[1.01]"
+                    onClick={() => setJoinMode("browse")}
+                    className="relative group p-8 rounded-2xl border-2 border-yellow-400/30 bg-gradient-to-br from-yellow-900/20 to-black/30 hover:border-yellow-400/60 hover:from-yellow-900/40 transition-all"
                   >
-                    Confirm & Join Group →
+                    <div className="text-5xl mb-4">🔍</div>
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-2">Browse Groups</h2>
+                    <p className="text-yellow-200/60 text-sm mb-4">
+                      Pick your ideal settings. We'll find or create the perfect group.
+                    </p>
+                    <div className="flex items-center gap-2 text-yellow-400 text-sm font-semibold group-hover:gap-3 transition">
+                      Get Started <FaChevronRight size={14} />
+                    </div>
                   </button>
+
+                  <button
+                    onClick={() => setJoinMode("code")}
+                    className="relative group p-8 rounded-2xl border-2 border-yellow-400/30 bg-gradient-to-br from-yellow-900/20 to-black/30 hover:border-yellow-400/60 hover:from-yellow-900/40 transition-all"
+                  >
+                    <div className="text-5xl mb-4">🔑</div>
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-2">Have a Code?</h2>
+                    <p className="text-yellow-200/60 text-sm mb-4">
+                      Enter an invitation code from a friend or group admin.
+                    </p>
+                    <div className="flex items-center gap-2 text-yellow-400 text-sm font-semibold group-hover:gap-3 transition">
+                      Enter Code <FaChevronRight size={14} />
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Join by Code */}
+            {joinMode === "code" && (
+              <div>
+                <button onClick={() => setJoinMode(null)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-8 text-sm">
+                  <FaArrowLeft size={12} /> Back
+                </button>
+                <h1 className="text-3xl font-bold text-yellow-300 mb-2">Enter Group Code</h1>
+                <p className="text-yellow-200/60 mb-8">
+                  Codes are 6 characters. Ask your friend or group admin for theirs!
+                </p>
+
+                <form onSubmit={handleJoinByCode} className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="e.g., ABC123"
+                    value={groupCode}
+                    onChange={(e) => setGroupCode(e.target.value.toUpperCase())}
+                    maxLength={6}
+                    className="w-full px-6 py-3 rounded-xl bg-black/40 border border-yellow-400/30 text-yellow-300 placeholder-yellow-200/30 text-center text-2xl tracking-widest font-bold focus:outline-none focus:border-yellow-400/60"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading || !groupCode.trim()}
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold text-lg hover:shadow-lg hover:shadow-yellow-500/30 transition disabled:opacity-50"
+                  >
+                    {loading ? "Joining..." : "Join Group"}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Browse Mode */}
+            {joinMode === "browse" && (
+              <div>
+                <button onClick={() => setJoinMode(null)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
+                  <FaArrowLeft size={12} /> Back
+                </button>
+
+                {/* ── STEP 0: Choose Payout Cycle ── */}
+                {step === 0 && (
+                  <div>
+                    <StepBar current={step} total={5} />
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-1 flex items-center gap-3">
+                      <FaClock /> Choose Your Payout Cycle
+                    </h2>
+                    <p className="text-yellow-200/50 text-sm mb-8">
+                      How often do you want to rotate who receives the payout? Shorter cycles = faster returns.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {[7, 14, 21].map((duration) => (
+                        <button
+                          key={duration}
+                          onClick={() => { setSelectedDuration(duration); setStep(1); }}
+                          className={`text-left rounded-2xl border-2 p-6 transition-all hover:scale-[1.02] ${
+                            selectedDuration === duration
+                              ? "border-yellow-400 bg-yellow-900/25"
+                              : "border-yellow-400/25 bg-black/30 hover:border-yellow-400/50"
+                          }`}
+                        >
+                          <div className="text-3xl mb-4">{CYCLE_INFO[duration].icon}</div>
+                          <h3 className="text-xl font-bold text-yellow-200 mb-1">{CYCLE_INFO[duration].label}</h3>
+                          <p className="text-yellow-200/50 text-sm mb-3">{CYCLE_INFO[duration].tagline}</p>
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${CYCLE_INFO[duration].badgeBg}`}>
+                            {CYCLE_INFO[duration].badge}
+                          </span>
+                          <p className="text-yellow-200/40 text-xs mt-3">{CYCLE_INFO[duration].tip}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── STEP 1: Choose Contribution Amount ── */}
+                {step === 1 && (
+                  <div>
+                    <StepBar current={step} total={5} />
+                    <button onClick={() => setStep(0)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
+                      <FaArrowLeft size={12} /> Back
+                    </button>
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-1 flex items-center gap-3">
+                      <FaMoneyBillWave /> Choose Your Contribution
+                    </h2>
+                    <p className="text-yellow-200/50 text-sm mb-8">
+                      How much do you want to contribute each day/week? The more members contribute, the bigger your payout when it's your turn.
+                    </p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {CONTRIBUTION_AMOUNTS.map((amount) => (
+                        <button
+                          key={amount}
+                          onClick={() => { setSelectedAmount(amount); setStep(2); }}
+                          className={`text-center rounded-2xl border-2 p-5 transition-all hover:scale-[1.02] ${
+                            selectedAmount === amount
+                              ? "border-yellow-400 bg-yellow-900/25"
+                              : "border-yellow-400/25 bg-black/30 hover:border-yellow-400/50"
+                          }`}
+                        >
+                          <div className="text-2xl font-black text-yellow-300">{fmt(amount)}</div>
+                          <p className="text-yellow-200/40 text-xs mt-2">per day/week</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── STEP 2: Choose Contribution Frequency ── */}
+                {step === 2 && (
+                  <div>
+                    <StepBar current={step} total={5} />
+                    <button onClick={() => setStep(1)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
+                      <FaArrowLeft size={12} /> Back
+                    </button>
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-1 flex items-center gap-3">
+                      <FaCalendarAlt /> How Often Do You Want to Contribute?
+                    </h2>
+                    <p className="text-yellow-200/50 text-sm mb-8">
+                      Daily contributions add up faster but require discipline. Weekly is easier to remember.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {[
+                        {
+                          key: "Daily",
+                          icon: "⚡",
+                          title: "Daily",
+                          desc: "Contribute every day. Perfect for people who get paid daily or want to build discipline.",
+                          badge: "Every Day",
+                        },
+                        {
+                          key: "Weekly",
+                          icon: "📅",
+                          title: "Weekly",
+                          desc: "Contribute once per week. Great for people with a regular income schedule.",
+                          badge: "Once a Week",
+                        },
+                      ].map((freq) => (
+                        <button
+                          key={freq.key}
+                          onClick={() => { setSelectedFrequency(freq.key); setStep(3); }}
+                          className={`text-left rounded-2xl border-2 p-7 transition-all hover:scale-[1.02] ${
+                            selectedFrequency === freq.key
+                              ? "border-yellow-400 bg-yellow-900/25"
+                              : "border-yellow-400/25 bg-black/30 hover:border-yellow-400/50"
+                          }`}
+                        >
+                          <div className="text-4xl mb-4">{freq.icon}</div>
+                          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-yellow-400/15 text-yellow-300 mb-3 inline-block">
+                            {freq.badge}
+                          </span>
+                          <h3 className="text-xl font-bold text-yellow-200 mb-2">{freq.title}</h3>
+                          <p className="text-yellow-200/50 text-sm leading-relaxed">{freq.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── STEP 3: Choose Group Size ── */}
+                {step === 3 && (
+                  <div>
+                    <StepBar current={step} total={5} />
+                    <button onClick={() => setStep(2)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
+                      <FaArrowLeft size={12} /> Back
+                    </button>
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-1 flex items-center gap-3">
+                      <FaUsers /> Choose Group Size
+                    </h2>
+                    <p className="text-yellow-200/50 text-sm mb-8">
+                      How many members should be in your group? More members = bigger payout for each person's turn.
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      {GROUP_SIZES.map(({ size, label, desc }) => (
+                        <button
+                          key={size}
+                          onClick={() => { setSelectedSize(size); setStep(4); }}
+                          className={`text-left rounded-2xl border-2 p-6 transition-all hover:scale-[1.02] ${
+                            selectedSize === size
+                              ? "border-yellow-400 bg-yellow-900/25"
+                              : "border-yellow-400/25 bg-black/30 hover:border-yellow-400/50"
+                          }`}
+                        >
+                          <FaUsers className="text-yellow-300 text-3xl mb-4" />
+                          <h3 className="text-2xl font-black text-yellow-200 mb-1">{label}</h3>
+                          <p className="text-yellow-200/45 text-sm">{desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── STEP 4: Review & Confirm ── */}
+                {step === 4 && selectedDuration && selectedAmount && selectedFrequency && selectedSize && (
+                  <div>
+                    <StepBar current={step} total={5} />
+                    <button onClick={() => setStep(3)} className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm">
+                      <FaArrowLeft size={12} /> Back
+                    </button>
+                    <h2 className="text-2xl font-bold text-yellow-300 mb-1">Review Your Choices</h2>
+                    <p className="text-yellow-200/50 text-sm mb-8">
+                      Double-check everything before joining. You'll be matched to an available group or a new one will be created for you.
+                    </p>
+
+                    {/* Summary card */}
+                    <div className={`rounded-2xl border-2 bg-gradient-to-br ${CYCLE_INFO[selectedDuration].gradient} ${CYCLE_INFO[selectedDuration].border} p-7 mb-6`}>
+                      {/* Category banner */}
+                      <div className="flex items-center gap-3 mb-6 pb-5 border-b border-yellow-400/10">
+                        <div className="text-3xl">{CYCLE_INFO[selectedDuration].icon}</div>
+                        <div>
+                          <p className="font-bold text-yellow-200 text-lg">{CYCLE_INFO[selectedDuration].label}</p>
+                          <p className="text-yellow-200/50 text-sm">{CYCLE_INFO[selectedDuration].tagline}</p>
+                        </div>
+                        <span className={`ml-auto text-xs font-bold px-3 py-1 rounded-full ${CYCLE_INFO[selectedDuration].badgeBg}`}>
+                          {CYCLE_INFO[selectedDuration].badge}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+                        <div className="text-center">
+                          <p className="text-yellow-200/45 text-xs mb-1">Payout Cycle</p>
+                          <p className="text-yellow-300 font-black text-xl">{selectedDuration} days</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-yellow-200/45 text-xs mb-1">Your Contribution</p>
+                          <p className="text-yellow-300 font-black text-xl">{fmt(selectedAmount)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-yellow-200/45 text-xs mb-1">Frequency</p>
+                          <p className="text-yellow-300 font-black text-xl">{selectedFrequency}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-yellow-200/45 text-xs mb-1">Group Size</p>
+                          <p className="text-yellow-300 font-black text-xl">{selectedSize} members</p>
+                        </div>
+                      </div>
+
+                      {/* Estimated payout highlight */}
+                      <div className="mt-6 pt-5 border-t border-yellow-400/10 text-center">
+                        <p className="text-yellow-200/45 text-xs mb-1">Your Estimated Payout When It's Your Turn</p>
+                        <p className="text-4xl font-black text-yellow-400">{fmt(estimatedPayout)}</p>
+                        <p className="text-yellow-200/35 text-xs mt-1">
+                          {selectedFrequency === "Daily"
+                            ? `(${fmt(selectedAmount)} × ${selectedSize} members × ${selectedDuration} days)`
+                            : `(${fmt(selectedAmount)} × ${selectedSize} members × ${selectedDuration / 7} week${selectedDuration / 7 > 1 ? "s" : ""})`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Notice */}
+                    <div className="mb-6 p-4 rounded-xl bg-black/40 border border-yellow-400/15 flex gap-3 items-start">
+                      <FaLightbulb className="text-yellow-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-yellow-300 text-sm font-semibold mb-1">How It Works</p>
+                        <p className="text-yellow-200/50 text-xs leading-relaxed">
+                          You'll be matched to an available system group with these exact settings. If no group has space, a new one will be created automatically. Each group has a unique code you can share. You cannot join the same group twice.
+                        </p>
+                      </div>
+                    </div>
+
+                    {loading ? (
+                      <div className="flex items-center justify-center gap-3 py-6 text-yellow-300">
+                        <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                        </svg>
+                        Matching you to a group...
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleJoinAvailable}
+                        className="w-full py-5 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-black text-lg hover:shadow-xl hover:shadow-yellow-500/30 transition transform hover:scale-[1.01]"
+                      >
+                        Confirm & Join Group →
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
