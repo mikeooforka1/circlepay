@@ -31,10 +31,11 @@ export default function ForgotPassword() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/auth/request-reset-otp`, {
+      // UPDATED: Changed from /api/auth/request-reset-otp to /api/forgot-password/request-reset-otp
+      const res = await fetch(`${API_URL}/api/forgot-password/request-reset-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emailOrPhone: email }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await res.json();
@@ -70,7 +71,8 @@ export default function ForgotPassword() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/auth/verify-reset-otp`, {
+      // UPDATED: Changed from /api/auth/verify-reset-otp to /api/forgot-password/verify-reset-otp
+      const res = await fetch(`${API_URL}/api/forgot-password/verify-reset-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ otp, token }),
@@ -125,7 +127,8 @@ export default function ForgotPassword() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/auth/reset-password`, {
+      // UPDATED: Changed from /api/auth/reset-password to /api/forgot-password/reset-password
+      const res = await fetch(`${API_URL}/api/forgot-password/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newPassword, token }),
