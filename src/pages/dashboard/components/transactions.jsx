@@ -556,17 +556,55 @@ For support, visit circlePay.com`;
               }}
             >
               {/* Receipt Header */}
-              <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>
-                  {typeIcons[selectedTx.type] || "📊"}
-                </div>
-                <h3 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#fff", marginBottom: "0.25rem" }}>
-                  CirclePay Receipt
-                </h3>
-                <p style={{ fontSize: "0.875rem", color: "#ffe066" }}>
-                  {formatDate(selectedTx.createdAt)}
-                </p>
-              </div>
+             {/* Receipt Header */}
+<div style={{ textAlign: "center", marginBottom: "2rem" }}>
+
+  <div
+    style={{
+      width: "80px",
+      height: "80px",
+      margin: "0 auto 1rem",
+      borderRadius: "20px",
+      overflow: "hidden",
+      background: "#fff",
+      padding: "10px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxShadow: "0 8px 25px rgba(0,0,0,0.25)",
+    }}
+  >
+    <img
+      src="/assets/images/site-logo.png"
+      alt="CirclePay Logo"
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+      }}
+    />
+  </div>
+
+  <h3
+    style={{
+      fontSize: "1.5rem",
+      fontWeight: "bold",
+      color: "#fff",
+      marginBottom: "0.25rem",
+    }}
+  >
+    CirclePay Receipt
+  </h3>
+
+  <p
+    style={{
+      fontSize: "0.875rem",
+      color: "#ffe066",
+    }}
+  >
+    {formatDate(selectedTx.createdAt)}
+  </p>
+</div>
 
               {/* Receipt Details */}
               <div style={{ color: "#fff", fontSize: "0.95rem", lineHeight: "1.8" }}>
