@@ -257,18 +257,37 @@ const Login = () => {
       }
 
       const response = await login(payload);
-      localStorage.setItem("token", response.token);
-      setAuthUser(response.user);
-      localStorage.setItem("user", JSON.stringify(response.user));
+
+// CLEAR OLD SESSION FIRST
+localStorage.removeItem("user");
+localStorage.removeItem("token");
+
+// SAVE NEW SESSION
+localStorage.setItem("token", response.token);
+localStorage.setItem("user", JSON.stringify(response.user));
+
+// UPDATE AUTH CONTEXT
+setAuthUser(response.user);
+
+console.log("LOGIN RESPONSE USER:", response.user);
+console.log("IS ADMIN:", response.user?.isAdmin);
 
       // Show redirect screen
       setRedirectUserName(response.user?.fullname?.split(' ')[0] || 'User');
       setIsRedirecting(true);
 
       // Navigate after animation completes
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2500);
+     setTimeout(() => {
+  const savedUser = JSON.parse(localStorage.getItem("user"));
+
+  console.log("SAVED USER:", savedUser);
+
+  if (savedUser?.isAdmin === true) {
+    navigate("/admin", { replace: true });
+  } else {
+    navigate("/dashboard", { replace: true });
+  }
+}, 2500);
     } catch (err) {
       setRootError(
         err?.response?.data?.message ||
@@ -315,9 +334,17 @@ const Login = () => {
       setIsRedirecting(true);
 
       // Navigate after animation completes
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 3500);
+    setTimeout(() => {
+  const savedUser = JSON.parse(localStorage.getItem("user"));
+
+  console.log("SAVED USER:", savedUser);
+
+  if (savedUser?.isAdmin === true) {
+    navigate("/admin", { replace: true });
+  } else {
+    navigate("/dashboard", { replace: true });
+  }
+}, 3500);
     } catch (err) {
       setPinError(
         err?.response?.data?.message ||

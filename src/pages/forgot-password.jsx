@@ -2,6 +2,18 @@ import React, { useState } from "react";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
+// ─────────────────────────────────────────────
+// Frontend logger — wraps console with a prefix
+// and timestamps so logs are easy to grep in
+// browser DevTools or log aggregators.
+// ─────────────────────────────────────────────
+const log = {
+  info:  (...args) => console.log (`[ForgotPwd] ℹ️ `, ...args),
+  warn:  (...args) => console.warn(`[ForgotPwd] ⚠️ `, ...args),
+  error: (...args) => console.error(`[ForgotPwd] ❌`, ...args),
+  ok:    (...args) => console.log (`[ForgotPwd] ✅`, ...args),
+};
+
 export default function ForgotPassword() {
   const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
   const [email, setEmail] = useState("");
@@ -12,9 +24,9 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [token, setToken] = useState("");
-  const [userEmail, setUserEmail] = useState(""); // Store email for display
-  const [showNewPassword, setShowNewPassword] = useState(false); // Toggle new password visibility
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Toggle confirm password visibility
+  const [userEmail, setUserEmail] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Step 1: Check if email is registered and send OTP
   const handleRequestOtp = async (e) => {
@@ -23,36 +35,63 @@ export default function ForgotPassword() {
     setError("");
     setMessage("");
 
+    log.info("handleRequestOtp() called");
+
     // Validate email format
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      log.warn("Email validation failed:", email);
       setError("Please enter a valid email address");
       setLoading(false);
       return;
     }
 
+    log.info("Sending request → POST /api/forgot-password/request-reset-otp", { email });
+    const startTime = Date.now();
+
     try {
-      // UPDATED: Changed from /api/auth/request-reset-otp to /api/forgot-password/request-reset-otp
       const res = await fetch(`${API_URL}/api/forgot-password/request-reset-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
 
-      const data = await res.json();
+      const elapsed = Date.now() - startTime;
+      log.info(`Response received in ${elapsed}ms — HTTP ${res.status}`);
+
+      let data;
+      try {
+        data = await res.json();
+        log.info("Response body:", { success: data.success, message: data.message, hasToken: !!data.token });
+      } catch (parseErr) {
+        log.error("Failed to parse JSON response:", parseErr.message);
+        setError("Unexpected server response. Please try again.");
+        setLoading(false);
+        return;
+      }
 
       if (res.ok && data.success) {
+        log.ok("OTP request succeeded — advancing to step 2");
         setMessage(`✓ 4-digit code sent to ${email}`);
         setToken(data.token);
         setUserEmail(email);
         setStep(2);
-        setEmail(""); // Clear email field for next step
+        setEmail("");
       } else {
+        log.warn(`OTP request rejected by server (HTTP ${res.status}):`, data.message);
         setError(data.message || "Email not registered in our system");
       }
     } catch (err) {
+      const elapsed = Date.now() - startTime;
+      log.error(`Network error after ${elapsed}ms:`, err.message, err);
+
+      if (err.name === "TypeError" && err.message.includes("fetch")) {
+        log.error("Likely cause: API server is unreachable or CORS is blocking the request.");
+        log.error("API_URL used:", API_URL);
+      }
+
       setError("Network error. Please check your connection and try again.");
-      console.error(err);
     }
+
     setLoading(false);
   };
 
@@ -63,34 +102,57 @@ export default function ForgotPassword() {
     setError("");
     setMessage("");
 
-    // Validate OTP
+    log.info("handleVerifyOtp() called");
+
     if (!otp || otp.length !== 4 || !/^\d{4}$/.test(otp)) {
+      log.warn("OTP validation failed — not a 4-digit number:", otp);
       setError("Please enter a valid 4-digit code");
       setLoading(false);
       return;
     }
 
+    log.info("Sending request → POST /api/forgot-password/verify-reset-otp", {
+      otp,
+      tokenPrefix: token?.slice(0, 8) + "...",
+    });
+    const startTime = Date.now();
+
     try {
-      // UPDATED: Changed from /api/auth/verify-reset-otp to /api/forgot-password/verify-reset-otp
       const res = await fetch(`${API_URL}/api/forgot-password/verify-reset-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ otp, token }),
       });
 
-      const data = await res.json();
+      const elapsed = Date.now() - startTime;
+      log.info(`Response received in ${elapsed}ms — HTTP ${res.status}`);
+
+      let data;
+      try {
+        data = await res.json();
+        log.info("Response body:", { success: data.success, message: data.message });
+      } catch (parseErr) {
+        log.error("Failed to parse JSON response:", parseErr.message);
+        setError("Unexpected server response. Please try again.");
+        setLoading(false);
+        return;
+      }
 
       if (res.ok && data.success) {
+        log.ok("OTP verified — advancing to step 3");
         setMessage("✓ Code verified successfully!");
         setStep(3);
-        setOtp(""); // Clear OTP field
+        setOtp("");
       } else {
+        log.warn(`OTP verification rejected (HTTP ${res.status}):`, data.message);
         setError(data.message || "Invalid or expired code. Please try again.");
       }
     } catch (err) {
+      const elapsed = Date.now() - startTime;
+      log.error(`Network error after ${elapsed}ms:`, err.message, err);
       setError("Network error. Please try again.");
-      console.error(err);
     }
+
     setLoading(false);
   };
 
@@ -101,53 +163,76 @@ export default function ForgotPassword() {
     setError("");
     setMessage("");
 
+    log.info("handleResetPassword() called");
+
     // Validate passwords
     if (!newPassword || newPassword.length < 8) {
+      log.warn("Password validation failed: too short");
       setError("Password must be at least 8 characters long");
       setLoading(false);
       return;
     }
-
     if (!/[A-Z]/.test(newPassword)) {
+      log.warn("Password validation failed: no uppercase letter");
       setError("Password must contain at least one uppercase letter");
       setLoading(false);
       return;
     }
-
     if (!/\d/.test(newPassword)) {
+      log.warn("Password validation failed: no digit");
       setError("Password must contain at least one number");
       setLoading(false);
       return;
     }
-
     if (newPassword !== confirmPassword) {
+      log.warn("Password validation failed: passwords do not match");
       setError("Passwords do not match");
       setLoading(false);
       return;
     }
 
+    log.info("Sending request → POST /api/forgot-password/reset-password", {
+      tokenPrefix: token?.slice(0, 8) + "...",
+    });
+    const startTime = Date.now();
+
     try {
-      // UPDATED: Changed from /api/auth/reset-password to /api/forgot-password/reset-password
       const res = await fetch(`${API_URL}/api/forgot-password/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newPassword, token }),
       });
 
-      const data = await res.json();
+      const elapsed = Date.now() - startTime;
+      log.info(`Response received in ${elapsed}ms — HTTP ${res.status}`);
+
+      let data;
+      try {
+        data = await res.json();
+        log.info("Response body:", { success: data.success, message: data.message });
+      } catch (parseErr) {
+        log.error("Failed to parse JSON response:", parseErr.message);
+        setError("Unexpected server response. Please try again.");
+        setLoading(false);
+        return;
+      }
 
       if (res.ok && data.success) {
+        log.ok("Password reset successful — redirecting to /login in 2s");
         setMessage("✓ Password reset successfully! Redirecting to login...");
         setTimeout(() => {
           window.location.href = "/login";
         }, 2000);
       } else {
+        log.warn(`Password reset rejected (HTTP ${res.status}):`, data.message);
         setError(data.message || "Failed to reset password. Please try again.");
       }
     } catch (err) {
+      const elapsed = Date.now() - startTime;
+      log.error(`Network error after ${elapsed}ms:`, err.message, err);
       setError("Network error. Please try again.");
-      console.error(err);
     }
+
     setLoading(false);
   };
 
@@ -227,6 +312,7 @@ export default function ForgotPassword() {
             <button
               type="button"
               onClick={() => {
+                log.info("Back to step 1 clicked");
                 setStep(1);
                 setOtp("");
                 setError("");
@@ -264,28 +350,12 @@ export default function ForgotPassword() {
                   disabled={loading}
                 >
                   {showNewPassword ? (
-                    // Eye Open Icon
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
-                    // Eye Closed Icon
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
@@ -319,28 +389,12 @@ export default function ForgotPassword() {
                   disabled={loading}
                 >
                   {showConfirmPassword ? (
-                    // Eye Open Icon
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
-                    // Eye Closed Icon
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
@@ -360,6 +414,7 @@ export default function ForgotPassword() {
             <button
               type="button"
               onClick={() => {
+                log.info("Back to step 2 clicked");
                 setStep(2);
                 setNewPassword("");
                 setConfirmPassword("");

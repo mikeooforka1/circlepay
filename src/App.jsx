@@ -1,5 +1,11 @@
 import "./styles/global.css";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -32,7 +38,19 @@ import CreateGroup from "./pages/dashboard/CreateGroup";
 import JoinGroup from "./pages/dashboard/JoinGroup";
 import GroupPage from "./pages/dashboard/GroupPage";
 import Contribute from "./pages/dashboard/Contribute";
+import AdminDashboard from "./pages/admin/index.jsx";
+import AdminTransactions from "./pages/admin/Admintransactions.jsx";
+import DepositFees from "./pages/admin/DepositFees.jsx";
 
+function AdminRoute({ children }) {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  if (!user?.isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 function AppRoutes() {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
@@ -53,6 +71,8 @@ function AppRoutes() {
 const hideFooterRoutes = [
   "/dashboard",
   "/profile",
+   "/admin",
+  "/admin/transactions",
   "/dashboard/payment",
   "/dashboard/withdraw",
   "/dashboard/airtime",
@@ -65,13 +85,17 @@ const hideFooterRoutes = [
   "/dashboard/group",
   "/dashboard/contribute",
 ];
+const hideNavbarRoutes = ["/admin"];
 
+const showNavbar = !hideNavbarRoutes.some(route =>
+  location.pathname.startsWith(route)
+);
 const showFooter = !hideFooterRoutes.some(route =>
   location.pathname.startsWith(route)
 );
   return (
   <div className="min-h-screen flex flex-col bg-[#090b14] text-white relative">
-  <NavBar />
+ {showNavbar && <NavBar />}
 
   <main className="flex-1">
     <Routes>
@@ -99,6 +123,30 @@ const showFooter = !hideFooterRoutes.some(route =>
       <Route path="/dashboard/join-group" element={<JoinGroup />} />
       <Route path="/dashboard/group" element={<GroupPage />} />
       <Route path="/dashboard/contribute" element={<Contribute />} />
+     <Route
+  path="/admin"
+  element={
+    <AdminRoute>
+      <AdminDashboard />
+    </AdminRoute>
+  }
+/>
+<Route
+  path="/admin/deposit-fees"
+  element={
+    <AdminRoute>
+      <DepositFees />
+    </AdminRoute>
+  }
+/>
+<Route
+  path="/admin/transactions"
+  element={
+    <AdminRoute>
+      <AdminTransactions />
+    </AdminRoute>
+  }
+/>
       <Route path="*" element={<NotFound />} />
     </Routes>
   </main>
