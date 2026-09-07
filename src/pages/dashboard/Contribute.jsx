@@ -2,681 +2,484 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaArrowLeft,
-  FaWallet,
+  FaUniversity,
+  FaCopy,
   FaCheckCircle,
   FaExclamationCircle,
-  FaUsers,
-  FaClock,
-  FaMoneyBillWave,
+  FaReceipt,
+  FaShieldAlt,
+  FaCamera,
+  FaTrash,
+  FaLock,
+  FaUsers
 } from "react-icons/fa";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-// Format currency
 function fmt(n) {
-  return `₦${Number(n).toLocaleString()}`;
+  return `₦${Number(n || 0).toLocaleString()}`;
 }
 
 export default function ContributePage() {
   const navigate = useNavigate();
 
-  // State
   const [group, setGroup] = useState(null);
-  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [contributing, setContributing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [step, setStep] = useState(1); // 1: Review | 2: Confirm | 3: Success
+  const [successData, setSuccessData] = useState(null);
+  const [copied, setCopied] = useState(false);
 
-  // Custom contribution amount
-  const [customAmount, setCustomAmount] = useState(null);
-  const [showCustomInput, setShowCustomInput] = useState(false);
+  // Form State
+  const [amount, setAmount] = useState("");
+  const [transactionReference, setTransactionReference] = useState("");
+  const [senderAccountName, setSenderAccountName] = useState("");
+  const [receiptImage, setReceiptImage] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.log("No token yet");
-      return;
-    }
-    fetchGroupAndBalance();
+    fetchActiveGroup();
   }, []);
 
-  const fetchGroupAndBalance = async () => {
+  const fetchActiveGroup = async () => {
     try {
       setLoading(true);
       setError("");
-
       const token = localStorage.getItem("token");
       if (!token) {
-        setLoading(false);
-        setError("Please login again");
+        navigate("/login");
         return;
       }
 
-      // ── FETCH GROUP ─────────────────────────────────────────────────
-      const groupRes = await fetch(`${API_URL}/api/groups/my-group/first`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+      const res = await fetch(`${API_URL}/api/groups/my-group/first`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      const data = await res.json();
 
-      // FIX 1 & 3: use `groupData` (the parsed response), NOT the `group` state variable.
-      // At this point `group` state is still null — it hasn't been set yet.
-      const groupData = await groupRes.json();
-      console.log("GROUP DATA:", groupData);
-
-      if (groupRes.ok && groupData.success && groupData.group) {
-        // FIX 2: store the full group OBJECT, not just a field from it.
-        // Original code did: setGroup(group?.groupName)  →  stored a string, not the object.
-        setGroup(groupData.group);
+      if (res.ok && data.success && data.group) {
+        setGroup(data.group);
+        setAmount(data.group.contributionAmount || "");
       } else {
-        // FIX 3: read error from `groupData`, not from `group` state (which is null).
-        console.log("No valid group returned:", groupData);
-        setError(groupData?.message || "Could not load group. Please join a group first.");
-        setLoading(false);
-        return;
-      }
-
-      // ── FETCH WALLET ─────────────────────────────────────────────────
-      const walletRes = await fetch(`${API_URL}/api/wallet/details`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const walletData = await walletRes.json();
-      console.log("WALLET DATA:", walletData);
-
-      if (walletRes.ok) {
-        // FIX 4: the state setter is `setWalletBalance`, not `setBalance`.
-        // Original code called setBalance() which doesn't exist → ReferenceError → catch fires
-        // → setError("Something went wrong") → blank error screen.
-        setWalletBalance(walletData.balance || 0);
-      } else {
-        console.log("Wallet fetch failed:", walletData.message);
-        // Non-fatal: we still show the UI, just with 0 balance and a warning.
-        setWalletBalance(0);
+        setError(data.message || "You must join or create an Ajo group before contributing.");
       }
     } catch (err) {
-      console.error("FETCH ERROR:", err);
-      setError("Something went wrong loading your data. Please try again.");
+      setError("Network error loading group information.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Determine the contribution amount (standard or custom)
-  const contributionAmount = customAmount || group?.contributionAmount || 0;
+  const handleCopy = (text) => {
+    if (text) {
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
-  // Check if user has enough balance
-  const hasEnoughBalance = walletBalance >= contributionAmount;
+  const handleReceiptChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  // Handle contribution
-  const handleContribute = async () => {
-    if (!group) return;
-    if (!hasEnoughBalance) {
-      setError("Insufficient balance to contribute");
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size exceeds 5MB. Please choose a smaller screenshot.");
+      return;
+    }
+
+    setReceiptFileName(file.name);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setReceiptImage(reader.result);
+      setError("");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeReceipt = () => {
+    setReceiptImage("");
+    setReceiptFileName("");
+  };
+
+  const handleConfirmDeposit = async (e) => {
+    e.preventDefault();
+    if (!group?._id) return;
+
+    if (!transactionReference.trim()) {
+      setError("Please enter your bank transfer reference or session ID");
+      return;
+    }
+
+    if (!receiptImage) {
+      setError("Please upload a screenshot or photo of your payment receipt.");
       return;
     }
 
     try {
-      setContributing(true);
+      setSubmitting(true);
       setError("");
       const token = localStorage.getItem("token");
 
-      // Safe: group._id is now always the real ObjectId because we fixed setGroup above.
-      const res = await fetch(`${API_URL}/api/groups/${group._id}/contribute`, {
+      const res = await fetch(`${API_URL}/api/groups/${group._id}/deposit-confirm`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ amount: contributionAmount }),
+        body: JSON.stringify({
+          amount: Number(amount),
+          transactionReference: transactionReference.trim(),
+          senderAccountName: senderAccountName.trim(),
+          receiptImage: receiptImage
+        })
       });
 
       const data = await res.json();
-
       if (res.ok && data.success) {
-        setSuccess(true);
-        setStep(3);
-        // Refresh wallet balance after a short delay
-        setTimeout(() => {
-          fetchGroupAndBalance();
-        }, 2000);
+        setSuccessData(data.deposit);
       } else {
-        setError(data.message || "Failed to contribute");
+        setError(data.message || "Failed to record deposit confirmation");
       }
     } catch (err) {
-      console.error("Contribution error:", err);
-      setError("Network error. Please try again.");
+      setError("Network error submitting deposit confirmation");
     } finally {
-      setContributing(false);
+      setSubmitting(false);
     }
   };
 
-  // ── RENDER GUARDS ──────────────────────────────────────────────────────────
-  // FIX 5: Remove the duplicate unstyled early-return guards that were shadowing
-  // the real styled ones below. Only ONE set of guards is needed, styled properly.
-
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#10141a] to-[#1e293b]">
+      <main className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-400/30 border-t-yellow-400 mx-auto mb-4"></div>
-          <p className="text-yellow-200/70">Loading group and wallet...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-yellow-400/30 border-t-yellow-400 mx-auto mb-4" />
+          <p className="text-yellow-200/70 text-sm">Loading group collection details...</p>
         </div>
       </main>
     );
   }
 
-  // FIX 6: Guard only on `error` being set while group truly failed to load.
-  // Original: `if (error && !group)` — correct condition, but was always true because
-  // group was never being set (due to Bugs 1+2). With those fixed, this now only
-  // triggers when there truly is no group (e.g. user hasn't joined one).
   if (error && !group) {
     return (
-      <main className="min-h-screen pt-28 pb-10 px-4 bg-gradient-to-br from-[#10141a] via-[#0f1419] to-[#1a1f2e]">
-        <div className="max-w-2xl mx-auto">
+      <main className="min-h-screen pt-28 pb-10 px-4 bg-gradient-to-b from-[#0a0d14] via-black to-[#0a0d14] text-yellow-400">
+        <div className="max-w-md mx-auto text-center rounded-3xl border border-yellow-400/30 bg-black/60 p-8">
+          <div className="text-5xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-black text-yellow-300 mb-2">No Active Group</h2>
+          <p className="text-yellow-200/70 text-sm mb-6">{error}</p>
           <button
-            onClick={() => navigate("/dashboard")}
-            className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-8 text-sm"
+            onClick={() => navigate("/dashboard/join-group")}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-black text-sm"
           >
-            <FaArrowLeft size={12} /> Back to Dashboard
+            Join a Group Now
           </button>
-
-          <div className="rounded-2xl border border-red-500/30 bg-red-900/10 p-8 text-center">
-            <div className="text-5xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-red-400 mb-2">No Group Found</h1>
-            <p className="text-yellow-200/70 mb-6">{error}</p>
-            <button
-              onClick={() => navigate("/dashboard/join-group")}
-              className="px-6 py-3 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold hover:shadow-lg transition"
-            >
-              Join a Group
-            </button>
-          </div>
         </div>
       </main>
     );
   }
 
-  // ── MAIN RENDER ────────────────────────────────────────────────────────────
+  const isGroupFull = group?.members?.length >= group?.maxMembers;
+
   return (
-    <main className="min-h-screen pt-28 pb-10 px-4 bg-gradient-to-br from-[#10141a] via-[#0f1419] to-[#1a1f2e]">
+    <main className="min-h-screen pt-24 pb-16 px-4 bg-gradient-to-b from-[#0a0d14] via-black to-[#0a0d14] text-yellow-400">
       <div className="max-w-2xl mx-auto">
-        {/* Back Button */}
         <button
           onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-8 text-sm"
+          className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm"
         >
           <FaArrowLeft size={12} /> Back to Dashboard
         </button>
 
-        {/* ────────────────────────────────────────────────────────────── */}
-        {/* STEP 1: REVIEW CONTRIBUTION                                    */}
-        {/* ────────────────────────────────────────────────────────────── */}
-        {step === 1 && (
-          <>
-            <h1 className="text-4xl font-black text-yellow-300 mb-2">
-              Make a Contribution
-            </h1>
-            <p className="text-yellow-200/60 mb-8">
-              Contribute to your group using your wallet balance. Your contribution
-              helps other members get their payouts.
-            </p>
-
-            {/* ERROR BANNER — inline errors (e.g. wallet failed) after group loaded */}
-            {error && (
-              <div className="mb-6 p-4 rounded-xl bg-red-900/20 border border-red-500/30 text-red-300 text-sm flex items-start gap-3">
-                <FaExclamationCircle className="shrink-0 mt-0.5" />
-                <div>{error}</div>
-              </div>
-            )}
-
-            {/* WARNING: Wallet balance is zero */}
-            {walletBalance === 0 && !error && (
-              <div className="mb-6 p-4 rounded-xl bg-orange-900/20 border border-orange-500/30 text-orange-300 text-sm flex items-start gap-3">
-                <FaExclamationCircle className="shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold">⚠️ Wallet Balance is Zero</p>
-                  <p className="text-xs mt-1">
-                    Fund your wallet before contributing. Click "Fund Wallet" on
-                    the dashboard.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* GROUP OVERVIEW CARD */}
-            <div className="rounded-2xl border border-yellow-400/30 bg-gradient-to-br from-yellow-900/20 via-black/40 to-yellow-900/10 p-8 mb-8">
-              <h2 className="text-2xl font-bold text-yellow-300 mb-6">
-                {group?.groupName}
+        {/* ── CASE 1: CIRCLE NOT FULL (CONTRIBUTIONS LOCKED) ── */}
+        {!isGroupFull ? (
+          <div className="rounded-3xl border-2 border-yellow-400/40 bg-gradient-to-br from-yellow-950/30 via-black to-yellow-950/20 p-8 text-center shadow-2xl space-y-5">
+            <div className="w-16 h-16 rounded-full bg-yellow-400/10 border border-yellow-400/40 flex items-center justify-center mx-auto text-yellow-400 text-3xl">
+              <FaLock />
+            </div>
+            
+            <div>
+              <span className="px-3 py-1 rounded-full bg-yellow-400/15 text-yellow-300 text-xs font-bold uppercase tracking-wider">
+                Contributions Locked
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-yellow-300 mt-2">
+                Waiting for Circle to Fill
               </h2>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-black/40 rounded-xl p-4 border border-yellow-400/20">
-                  <p className="text-yellow-200/60 text-xs font-semibold uppercase mb-2">
-                    Members
-                  </p>
-                  <p className="text-2xl font-black text-yellow-300">
-                    {group?.members?.length ?? 0}
-                  </p>
-                </div>
-
-                <div className="bg-black/40 rounded-xl p-4 border border-yellow-400/20">
-                  <p className="text-yellow-200/60 text-xs font-semibold uppercase mb-2">
-                    Frequency
-                  </p>
-                  <p className="text-2xl font-black text-yellow-300">
-                    {group?.frequency}
-                  </p>
-                </div>
-
-                <div className="bg-black/40 rounded-xl p-4 border border-yellow-400/20">
-                  <p className="text-yellow-200/60 text-xs font-semibold uppercase mb-2">
-                    Cycle
-                  </p>
-                  <p className="text-2xl font-black text-yellow-300">
-                    {group?.payoutDuration}d
-                  </p>
-                </div>
-
-                <div className="bg-black/40 rounded-xl p-4 border border-yellow-400/20">
-                  <p className="text-yellow-200/60 text-xs font-semibold uppercase mb-2">
-                    Code
-                  </p>
-                  <p className="text-lg font-mono font-black text-yellow-300">
-                    {group?.groupCode}
-                  </p>
-                </div>
-              </div>
-
-              {/* Next Payout Info */}
-              {group?.nextPayoutDate && (
-                <div className="bg-black/30 rounded-xl p-4 border border-yellow-400/20">
-                  <div className="flex items-center gap-3">
-                    <FaClock className="text-yellow-400" />
-                    <div>
-                      <p className="text-yellow-200/60 text-xs font-semibold uppercase">
-                        Next Payout
-                      </p>
-                      <p className="text-yellow-300 font-bold">
-                        {new Date(group.nextPayoutDate).toLocaleDateString("en-US", {
-                          weekday: "short",
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* WALLET BALANCE CARD */}
-            <div className="rounded-2xl border-2 border-yellow-400/40 bg-gradient-to-br from-yellow-500/10 via-black/40 to-yellow-900/10 p-6 mb-8">
-              <div className="flex items-center gap-3 mb-4">
-                <FaWallet className="text-yellow-400 text-2xl" />
-                <h3 className="text-lg font-bold text-yellow-300">
-                  Your Wallet Balance
-                </h3>
-              </div>
-              <p className="text-4xl font-black text-yellow-300 mb-2">
-                {fmt(walletBalance)}
-              </p>
-              <p className="text-yellow-200/60 text-sm">
-                Available funds in your wallet
+              <p className="text-yellow-200/70 text-sm mt-1 max-w-md mx-auto leading-relaxed">
+                To keep payouts fair, contributions start only when all <strong>{group?.maxMembers} members</strong> have joined.
               </p>
             </div>
 
-            {/* CONTRIBUTION AMOUNT SELECTION */}
-            <div className="rounded-2xl border border-yellow-400/30 bg-black/40 p-6 mb-8">
-              <h3 className="text-lg font-bold text-yellow-300 mb-4 flex items-center gap-2">
-                <FaMoneyBillWave /> Choose Contribution Amount
-              </h3>
+            {/* Membership Progress */}
+            <div className="bg-black/60 rounded-2xl border border-yellow-400/20 p-5 max-w-md mx-auto">
+              <div className="flex justify-between items-center text-xs font-bold mb-2">
+                <span className="text-yellow-200/60">Circle Capacity</span>
+                <span className="text-yellow-400 font-mono text-sm">{group?.members?.length || 0} / {group?.maxMembers} Joined</span>
+              </div>
+              <div className="w-full bg-black/80 rounded-full h-3 overflow-hidden border border-yellow-400/30">
+                <div 
+                  className="bg-gradient-to-r from-yellow-400 to-amber-500 h-full transition-all duration-500" 
+                  style={{ width: `${Math.min(100, ((group?.members?.length || 0) / group?.maxMembers) * 100)}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-yellow-200/50 mt-2">
+                {group?.maxMembers - (group?.members?.length || 0)} spot(s) remaining before Turn #1 begins.
+              </p>
+            </div>
 
-              {/* Standard amount */}
+            {/* Invite Box */}
+            <div className="flex items-center justify-between gap-3 bg-black/80 border border-yellow-400/30 p-4 rounded-2xl max-w-md mx-auto text-left">
+              <div>
+                <p className="text-[10px] text-yellow-200/50 uppercase font-bold">Invite Code</p>
+                <p className="text-xl font-black font-mono tracking-widest text-yellow-400">{group?.groupCode}</p>
+              </div>
               <button
-                onClick={() => {
-                  setCustomAmount(null);
-                  setShowCustomInput(false);
-                }}
-                className={`w-full p-4 rounded-xl border-2 transition mb-3 text-left ${
-                  !customAmount && !showCustomInput
-                    ? "border-yellow-400 bg-yellow-900/25"
-                    : "border-yellow-400/30 bg-black/30 hover:border-yellow-400/50"
-                }`}
+                onClick={() => handleCopy(group?.groupCode)}
+                className="px-4 py-2 rounded-xl bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-300 font-bold text-xs transition"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-yellow-300 font-bold">
-                      Standard Amount (Required)
-                    </p>
-                    <p className="text-yellow-200/60 text-sm mt-1">
-                      Contribute the standard group amount
-                    </p>
-                  </div>
-                  <p className="text-3xl font-black text-yellow-400">
-                    {fmt(group?.contributionAmount)}
-                  </p>
-                </div>
+                {copied ? "Copied!" : "Copy Code"}
               </button>
+            </div>
 
-              {/* Custom amount option */}
-              <button
-                onClick={() => {
-                  setShowCustomInput(!showCustomInput);
-                  setCustomAmount(null);
-                }}
-                className={`w-full p-4 rounded-xl border-2 transition text-left ${
-                  showCustomInput
-                    ? "border-yellow-400 bg-yellow-900/25"
-                    : "border-yellow-400/30 bg-black/30 hover:border-yellow-400/50"
-                }`}
-              >
-                <p className="text-yellow-300 font-bold">
-                  Custom Amount (Optional)
-                </p>
-                <p className="text-yellow-200/60 text-sm mt-1">
-                  Contribute any amount to help your group faster
-                </p>
-              </button>
+            <button
+              onClick={() => navigate("/dashboard/group")}
+              className="px-6 py-3 rounded-xl border border-yellow-400/40 text-yellow-300 font-bold hover:bg-yellow-400/10 text-sm"
+            >
+              View Rotation Schedule & Members →
+            </button>
+          </div>
+        ) : successData ? (
+          /* ── CASE 2: SUCCESS RECEIPT ── */
+          <div className="rounded-3xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-950/20 via-black to-black p-8 shadow-2xl animate-in fade-in duration-200">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center mx-auto mb-3 text-emerald-400 text-3xl">
+                <FaCheckCircle />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black text-emerald-400">Deposit Proof Recorded!</h2>
+              <p className="text-yellow-200/70 text-xs sm:text-sm mt-1">
+                Your receipt image and bank reference are publicly logged with an exact timestamp.
+              </p>
+            </div>
 
-              {/* Custom amount input */}
-              {showCustomInput && (
-                <div className="mt-4 p-4 rounded-xl bg-black/40 border border-yellow-400/20">
-                  <label className="block text-yellow-300 text-sm font-semibold mb-2">
-                    Enter custom amount (₦)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={customAmount || ""}
-                    onChange={(e) =>
-                      setCustomAmount(e.target.value ? Number(e.target.value) : null)
-                    }
-                    placeholder={`Minimum: ₦1 | Balance: ${fmt(walletBalance)}`}
-                    className="w-full px-4 py-3 rounded-lg bg-black/60 border border-yellow-400/30 text-yellow-300 placeholder-yellow-200/30 focus:outline-none focus:border-yellow-400/60 text-lg"
+            <div className="bg-black/60 rounded-2xl border border-yellow-400/20 p-5 space-y-3 mb-6 font-mono text-xs sm:text-sm">
+              <div className="flex justify-between pb-2 border-b border-yellow-400/10">
+                <span className="text-yellow-200/50">Amount:</span>
+                <span className="text-yellow-300 font-bold">{fmt(successData.amount)}</span>
+              </div>
+              <div className="flex justify-between pb-2 border-b border-yellow-400/10">
+                <span className="text-yellow-200/50">Group:</span>
+                <span className="text-yellow-300">{group?.groupName}</span>
+              </div>
+              <div className="flex justify-between pb-2 border-b border-yellow-400/10">
+                <span className="text-yellow-200/50">Reference:</span>
+                <span className="text-yellow-400 font-bold">{successData.transactionReference}</span>
+              </div>
+              <div className="flex justify-between pb-2 border-b border-yellow-400/10">
+                <span className="text-yellow-200/50">Timestamp:</span>
+                <span className="text-emerald-300 font-bold">
+                  {new Date(successData.timestamp).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-yellow-200/50">Status:</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-300 text-xs font-bold uppercase">
+                  {successData.status}
+                </span>
+              </div>
+
+              {successData.receiptImage && (
+                <div className="pt-3 border-t border-yellow-400/10 text-center">
+                  <p className="text-[11px] text-yellow-200/60 mb-2">Attached Receipt Image:</p>
+                  <img 
+                    src={successData.receiptImage} 
+                    alt="Receipt" 
+                    className="w-full max-h-48 object-contain rounded-xl border border-yellow-400/30 mx-auto"
                   />
-                  {customAmount && customAmount > walletBalance && (
-                    <p className="text-red-400 text-xs mt-2">
-                      ⚠️ Amount exceeds wallet balance
-                    </p>
-                  )}
-                  {customAmount && customAmount > 0 && (
-                    <p className="text-yellow-200/60 text-xs mt-2">
-                      Amount: {fmt(customAmount)}
-                    </p>
-                  )}
                 </div>
               )}
             </div>
 
-            {/* CONTRIBUTION SUMMARY */}
-            <div className="rounded-2xl border border-yellow-400/30 bg-black/40 p-6 mb-8">
-              <h3 className="text-sm font-semibold text-yellow-300 uppercase mb-4">
-                Contribution Summary
-              </h3>
-
-              <div className="space-y-3">
-                <div className="flex justify-between items-center pb-3 border-b border-yellow-400/20">
-                  <p className="text-yellow-200/70">Amount to Contribute</p>
-                  <p className="text-2xl font-black text-yellow-300">
-                    {fmt(contributionAmount)}
-                  </p>
-                </div>
-
-                <div className="flex justify-between items-center pb-3 border-b border-yellow-400/20">
-                  <p className="text-yellow-200/70">Your Wallet Balance</p>
-                  <p className="text-lg font-bold text-yellow-300">
-                    {fmt(walletBalance)}
-                  </p>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <p className="text-yellow-200/70 font-semibold">
-                    Balance After Contribution
-                  </p>
-                  <p
-                    className={`text-2xl font-black ${
-                      walletBalance - contributionAmount >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {fmt(Math.max(0, walletBalance - contributionAmount))}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* INFO BOX */}
-            <div className="rounded-xl bg-black/40 border border-yellow-400/20 p-4 mb-8 flex gap-3 items-start">
-              <div className="text-yellow-400 mt-1 shrink-0">ℹ️</div>
-              <div className="text-sm text-yellow-200/70">
-                <p className="font-semibold text-yellow-300 mb-1">How It Works</p>
-                <p>
-                  Your contribution will be deducted from your wallet balance and
-                  added to the group. When it's your turn to receive payout, all
-                  contributions from group members will be transferred to you.
-                </p>
-              </div>
-            </div>
-
-            {/* ACTION BUTTONS */}
-            {!hasEnoughBalance && contributionAmount > 0 ? (
-              <div className="rounded-xl bg-red-900/20 border border-red-500/30 p-4 mb-6">
-                <p className="text-red-300 text-sm font-semibold mb-3">
-                  ❌ Insufficient Balance
-                </p>
-                <p className="text-red-300/80 text-sm mb-4">
-                  You need {fmt(contributionAmount - walletBalance)} more to
-                  contribute.
-                </p>
-                <button
-                  onClick={() => navigate("/dashboard")}
-                  className="w-full py-3 rounded-lg bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold hover:shadow-lg transition"
-                >
-                  Fund Wallet
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setStep(2)}
-                disabled={!hasEnoughBalance || contributionAmount === 0}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-black text-lg hover:shadow-xl hover:shadow-yellow-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Proceed to Confirm →
-              </button>
-            )}
-          </>
-        )}
-
-        {/* ────────────────────────────────────────────────────────────── */}
-        {/* STEP 2: CONFIRM CONTRIBUTION                                   */}
-        {/* ────────────────────────────────────────────────────────────── */}
-        {step === 2 && (
-          <>
-            <h1 className="text-4xl font-black text-yellow-300 mb-2">
-              Confirm Contribution
-            </h1>
-            <p className="text-yellow-200/60 mb-8">
-              Review and confirm your contribution details
-            </p>
-
-            {/* CONFIRMATION CARD */}
-            <div className="rounded-2xl border border-yellow-400/40 bg-gradient-to-br from-yellow-900/30 via-black/40 to-yellow-900/10 p-8 mb-8">
-              <div className="text-center mb-8">
-                <div className="text-6xl mb-4">💰</div>
-                <h2 className="text-3xl font-black text-yellow-300 mb-2">
-                  {fmt(contributionAmount)}
-                </h2>
-                <p className="text-yellow-200/60">
-                  Ready to contribute to {group?.groupName}?
-                </p>
-              </div>
-
-              <div className="space-y-4 bg-black/40 rounded-xl p-6 mb-8">
-                <div className="flex justify-between items-center pb-4 border-b border-yellow-400/20">
-                  <p className="text-yellow-200/70">Group</p>
-                  <p className="text-yellow-300 font-bold">{group?.groupName}</p>
-                </div>
-
-                <div className="flex justify-between items-center pb-4 border-b border-yellow-400/20">
-                  <p className="text-yellow-200/70">Contribution Amount</p>
-                  <p className="text-yellow-300 font-bold">
-                    {fmt(contributionAmount)}
-                  </p>
-                </div>
-
-                <div className="flex justify-between items-center pb-4 border-b border-yellow-400/20">
-                  <p className="text-yellow-200/70">Current Balance</p>
-                  <p className="text-yellow-300 font-bold">{fmt(walletBalance)}</p>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <p className="text-yellow-200/70">Balance After</p>
-                  <p className="text-green-400 font-bold">
-                    {fmt(walletBalance - contributionAmount)}
-                  </p>
-                </div>
-              </div>
-
-              {/* WARNING BOX */}
-              <div className="rounded-xl bg-orange-900/20 border border-orange-500/30 p-4 mb-6 flex gap-3 items-start">
-                <div className="text-orange-400 mt-1 shrink-0">⚠️</div>
-                <div className="text-sm text-orange-200/70">
-                  <p className="font-semibold text-orange-300 mb-1">
-                    Cannot Be Reversed
-                  </p>
-                  <p>
-                    Once contributed, the amount cannot be refunded. Please make
-                    sure you want to proceed.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* ACTION BUTTONS */}
             <div className="flex gap-3">
               <button
-                onClick={() => setStep(1)}
-                className="flex-1 py-4 rounded-xl border-2 border-yellow-400/40 text-yellow-300 font-bold hover:border-yellow-400/60 transition"
+                onClick={() => navigate("/dashboard")}
+                className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-black text-sm"
               >
-                ← Back
+                Back to Dashboard
               </button>
-
               <button
-                onClick={handleContribute}
-                disabled={contributing}
-                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-black text-lg hover:shadow-xl hover:shadow-green-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={() => navigate("/dashboard/group")}
+                className="flex-1 py-3.5 rounded-xl border border-yellow-400/30 text-yellow-300 font-bold hover:bg-yellow-400/10 text-sm"
               >
-                {contributing ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8z"
-                      />
-                    </svg>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FaCheckCircle /> Confirm & Contribute
-                  </>
-                )}
+                View Group Ledger
               </button>
             </div>
-          </>
-        )}
-
-        {/* ────────────────────────────────────────────────────────────── */}
-        {/* STEP 3: SUCCESS                                                */}
-        {/* ────────────────────────────────────────────────────────────── */}
-        {step === 3 && success && (
-          <>
-            <div className="text-center py-16">
-              <div className="text-7xl mb-6 animate-bounce">✅</div>
-
-              <h1 className="text-4xl font-black text-green-400 mb-2">
-                Contribution Successful!
-              </h1>
-
-              <p className="text-yellow-200/70 text-lg mb-8 max-w-lg mx-auto">
-                Your contribution of {fmt(contributionAmount)} has been added to{" "}
-                {group?.groupName}. Your fellow members will appreciate your support!
+          </div>
+        ) : (
+          /* ── CASE 3: CONTRIBUTION FORM (ACTIVE WHEN FULL) ── */
+          <div className="space-y-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-500 text-emerald-400 text-xs font-bold mb-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Circle Ready ({group?.members?.length}/{group?.maxMembers})
+              </div>
+              <h1 className="text-3xl font-black text-yellow-300 mb-1">Make Group Contribution</h1>
+              <p className="text-yellow-200/60 text-sm">
+                Transfer to the designated Group Head account, attach your payment screenshot, and submit proof.
               </p>
+            </div>
 
-              {/* SUCCESS DETAILS */}
-              <div className="rounded-2xl border border-green-500/30 bg-green-900/10 p-8 mb-8 max-w-lg mx-auto">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center pb-4 border-b border-green-500/20">
-                    <p className="text-yellow-200/70">Amount Contributed</p>
-                    <p className="text-green-400 font-bold text-lg">
-                      {fmt(contributionAmount)}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-900/30 border border-red-500/50 text-red-300 text-sm flex items-center gap-2">
+                <FaExclamationCircle className="flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Collection Account Card */}
+            <div className="rounded-3xl border-2 border-yellow-400/40 bg-gradient-to-br from-yellow-950/30 via-black to-yellow-950/20 p-6 sm:p-8 shadow-2xl">
+              <div className="flex items-center justify-between pb-4 border-b border-yellow-400/20 mb-5">
+                <div className="flex items-center gap-2">
+                  <FaUniversity className="text-yellow-400 text-xl" />
+                  <span className="font-bold text-yellow-200 text-sm">Group Head Collection Account</span>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-yellow-400/15 text-yellow-300 text-xs font-bold">
+                  {group?.groupName}
+                </span>
+              </div>
+
+              <div className="space-y-3 mb-4">
+                <div className="bg-black/60 border border-yellow-400/30 rounded-2xl p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] text-yellow-200/50 uppercase font-bold">Bank Name</p>
+                    <p className="text-lg font-bold text-yellow-300">{group?.collectionBankName || "Not set"}</p>
+                  </div>
+                </div>
+
+                <div className="bg-black/60 border border-yellow-400/40 rounded-2xl p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] text-yellow-200/50 uppercase font-bold">Account Number</p>
+                    <p className="text-2xl font-black font-mono tracking-widest text-yellow-400">
+                      {group?.collectionAccountNumber || "Not set"}
                     </p>
                   </div>
+                  <button
+                    onClick={() => handleCopy(group?.collectionAccountNumber)}
+                    className="p-3 rounded-xl bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-300 transition"
+                    title="Copy Account Number"
+                  >
+                    {copied ? <FaCheckCircle className="text-emerald-400" size={18} /> : <FaCopy size={18} />}
+                  </button>
+                </div>
 
-                  <div className="flex justify-between items-center pb-4 border-b border-green-500/20">
-                    <p className="text-yellow-200/70">Group</p>
-                    <p className="text-yellow-300 font-bold">{group?.groupName}</p>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <p className="text-yellow-200/70">New Wallet Balance</p>
-                    <p className="text-yellow-300 font-bold">
-                      {fmt(walletBalance - contributionAmount)}
+                <div className="bg-black/60 border border-yellow-400/30 rounded-2xl p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] text-yellow-200/50 uppercase font-bold">Beneficiary Name</p>
+                    <p className="text-sm font-bold text-yellow-300 truncate max-w-[280px]">
+                      {group?.collectionAccountName || "Group Head"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* INFO BOX */}
-              <div className="rounded-xl bg-black/40 border border-yellow-400/20 p-6 mb-8 max-w-lg mx-auto text-left">
-                <p className="font-semibold text-yellow-300 mb-3">What Happens Next?</p>
-                <ul className="space-y-2 text-yellow-200/70 text-sm">
-                  <li>✓ Your contribution is recorded in the group</li>
-                  <li>✓ You help fund payouts for other members</li>
-                  <li>
-                    ✓ When it's your turn, you'll receive contributions from all
-                    members
-                  </li>
-                  <li>✓ Monitor progress in the Group Details page</li>
-                </ul>
-              </div>
-
-              {/* ACTION BUTTONS */}
-              <div className="flex gap-3 max-w-lg mx-auto">
-                <button
-                  onClick={() => navigate("/dashboard")}
-                  className="flex-1 py-4 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold hover:shadow-lg transition"
-                >
-                  Back to Dashboard
-                </button>
-
-                <button
-                  onClick={() => navigate("/dashboard/group")}
-                  className="flex-1 py-4 rounded-xl border-2 border-yellow-400/40 text-yellow-300 font-bold hover:border-yellow-400/60 transition"
-                >
-                  View Group Details
-                </button>
+              <div className="p-3 rounded-xl bg-yellow-400/10 text-xs text-yellow-200/70 flex items-center gap-2">
+                <FaShieldAlt className="text-yellow-400 flex-shrink-0" />
+                Required contribution: <strong className="text-yellow-300 font-bold">{fmt(group?.contributionAmount)}</strong> per cycle ({group?.frequency}).
               </div>
             </div>
-          </>
+
+            {/* Submission Form */}
+            <form onSubmit={handleConfirmDeposit} className="rounded-3xl border border-yellow-400/30 bg-black/60 p-6 sm:p-8 space-y-5 shadow-xl">
+              <h3 className="text-base font-bold text-yellow-300 flex items-center gap-2">
+                <FaReceipt /> Submit Transfer Proof & Receipt
+              </h3>
+
+              <div>
+                <label className="block text-xs font-bold text-yellow-300 uppercase tracking-wider mb-1.5">
+                  Amount Transferred (₦)
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="5000"
+                  className="w-full px-4 py-3.5 rounded-xl bg-black/70 border border-yellow-400/30 text-yellow-200 font-bold text-lg focus:outline-none focus:border-yellow-400"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-yellow-300 uppercase tracking-wider mb-1.5">
+                  Bank Transaction Reference / Session ID
+                </label>
+                <input
+                  type="text"
+                  value={transactionReference}
+                  onChange={(e) => setTransactionReference(e.target.value)}
+                  placeholder="e.g. 100004291039 or Session ID"
+                  className="w-full px-4 py-3.5 rounded-xl bg-black/70 border border-yellow-400/30 text-yellow-200 font-mono tracking-wider focus:outline-none focus:border-yellow-400"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-yellow-300 uppercase tracking-wider mb-1.5">
+                  Sender Account Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={senderAccountName}
+                  onChange={(e) => setSenderAccountName(e.target.value)}
+                  placeholder="e.g. Michael Oforka"
+                  className="w-full px-4 py-3 rounded-xl bg-black/70 border border-yellow-400/30 text-yellow-200 focus:outline-none focus:border-yellow-400 text-sm"
+                />
+              </div>
+
+              {/* Receipt File Upload */}
+              <div>
+                <label className="block text-xs font-bold text-yellow-300 uppercase tracking-wider mb-1.5">
+                  Upload Payment Receipt Screenshot <span className="text-red-400">*</span>
+                </label>
+                
+                {!receiptImage ? (
+                  <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-yellow-400/40 rounded-2xl cursor-pointer bg-black/40 hover:bg-yellow-400/5 transition">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <FaCamera className="w-8 h-8 mb-2 text-yellow-400/70" />
+                      <p className="text-xs text-yellow-200 font-semibold">Click to upload transfer receipt image</p>
+                      <p className="text-[10px] text-yellow-200/40 mt-1">PNG, JPG, or WEBP (Max 5MB)</p>
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleReceiptChange} 
+                      className="hidden" 
+                      required 
+                    />
+                  </label>
+                ) : (
+                  <div className="relative rounded-2xl border border-yellow-400/40 overflow-hidden bg-black/60 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-yellow-300 font-mono truncate max-w-[200px]">{receiptFileName || "receipt.png"}</span>
+                      <button
+                        type="button"
+                        onClick={removeReceipt}
+                        className="text-red-400 hover:text-red-300 p-1 rounded-lg text-sm transition"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                    <img 
+                      src={receiptImage} 
+                      alt="Receipt Preview" 
+                      className="w-full max-h-56 object-contain rounded-xl border border-yellow-400/20"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting || !amount || !transactionReference.trim() || !receiptImage}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-black text-base hover:shadow-xl hover:shadow-yellow-500/20 transition disabled:opacity-40"
+              >
+                {submitting ? "Uploading Proof & Logging Timestamp..." : "Submit Proof with Receipt →"}
+              </button>
+            </form>
+          </div>
         )}
       </div>
     </main>

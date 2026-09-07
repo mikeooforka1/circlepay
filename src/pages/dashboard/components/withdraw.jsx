@@ -1,41 +1,42 @@
-import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { 
+  FaUniversity, 
+  FaSearch, 
+  FaCheckCircle, 
+  FaExclamationCircle, 
+  FaTimes, 
+  FaArrowLeft, 
+  FaShieldAlt,
+  FaBolt
+} from "react-icons/fa";
 
-const banks = [
+const NGN_TO_USD = 1461.66;
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+const DEFAULT_BANKS = [
   { name: "Access Bank", code: "044" },
-  { name: "GTBank Plc", code: "058" },
+  { name: "GTBank (Guaranty Trust Bank)", code: "058" },
+  { name: "Zenith Bank", code: "057" },
   { name: "First Bank of Nigeria", code: "011" },
-  { name: "Zenith Bank Plc", code: "057" },
-  { name: "United Bank for Africa", code: "033" },
+  { name: "United Bank for Africa (UBA)", code: "033" },
+  { name: "OPay (PayCom)", code: "999992" },
+  { name: "PalmPay", code: "999991" },
+  { name: "Kuda Microfinance Bank", code: "50211" },
+  { name: "Moniepoint MFB", code: "50515" },
   { name: "Fidelity Bank", code: "070" },
   { name: "Sterling Bank", code: "232" },
   { name: "Polaris Bank", code: "076" },
-  { name: "Citi Bank", code: "023" },
-  { name: "Ecobank Bank", code: "050" },
-  { name: "Unity Bank", code: "215" },
-  { name: "StanbicIBTC Bank", code: "221" },
-  { name: "Access Bank (Diamond)", code: "063" },
-  { name: "Heritage Bank", code: "030" },
-  { name: "Standard Chartered", code: "068" },
-  { name: "Suntrust Bank", code: "100" },
-  { name: "Providus Bank", code: "101" },
-  { name: "Rand Merchant Bank", code: "502" },
-  { name: "Titan Trust Bank", code: "102" },
-  { name: "Globus Bank", code: "103" },
-  { name: "Central Bank of Nigeria", code: "001" },
-  { name: "Keystone Bank", code: "082" },
+  { name: "Stanbic IBTC Bank", code: "221" },
+  { name: "Union Bank of Nigeria", code: "032" },
   { name: "Wema Bank", code: "035" },
   { name: "FCMB", code: "214" },
-  { name: "Jaiz Bank", code: "301" },
-  { name: "Parallex Bank", code: "104" },
-  { name: "Premium Trust Bank", code: "105" },
-  { name: "Signature Bank", code: "106" },
-  { name: "Optimus Bank", code: "107" },
+  { name: "Ecobank Nigeria", code: "050" },
+  { name: "Providus Bank", code: "101" },
+  { name: "Jaiz Bank", code: "301" }
 ];
 
-const resolvableBanks = banks.filter(b => b.code && b.code !== "302");
-const NGN_TO_USD = 1461.66;
-const API_BASE = process.env.REACT_APP_API_URL || "";
+const POPULAR_BANK_CODES = ["999992", "999991", "50211", "058", "057", "044"];
 
 function formatDollar(ngn) {
   const usd = ngn / NGN_TO_USD;
@@ -44,382 +45,404 @@ function formatDollar(ngn) {
 
 export default function Withdraw() {
   const location = useLocation();
+  const navigate = useNavigate();
   const maxAmount = location.state?.maxAmount || 0;
 
+  const [banksList, setBanksList] = useState(DEFAULT_BANKS);
   const [bankCode, setBankCode] = useState("");
   const [bankName, setBankName] = useState("");
-  const [bankSearch, setBankSearch] = useState("");
-  const [showBankDropdown, setShowBankDropdown] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [amount, setAmount] = useState("");
+
+  const [resolving, setResolving] = useState(false);
   const [bankError, setBankError] = useState("");
   const [hasValidated, setHasValidated] = useState(false);
-  const [resolving, setResolving] = useState(false);
+
+  const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
-  const bankDropdownRef = React.useRef(null);
 
   const minWithdraw = 20000;
   const canWithdraw = maxAmount >= minWithdraw;
   const amountValid = Number(amount) >= minWithdraw && Number(amount) <= maxAmount;
 
-  // Fetch user's saved bank details on mount
+  // 1. Fetch live bank list and saved user details
   useEffect(() => {
-    async function fetchBankDetails() {
+    const fetchInitialData = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      // Fetch dynamic banks
       try {
-        const res = await fetch(`${API_BASE}/api/users/bank-details`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        const banksRes = await fetch(`${API_BASE}/api/withdraw/banks`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
-        const data = await res.json();
-        if (res.ok && data.hasBankDetails && data.bankName && data.accountNumber) {
-          setBankName(data.bankName);
-          setAccountNumber(data.accountNumber);
-          setBankCode(
-            banks.find(b => b.name === data.bankName)?.code || ""
-          );
-          setHasValidated(true);
-          setAccountName(data.accountName || "");
+        const banksData = await banksRes.json();
+        if (banksData.status && banksData.banks?.length) {
+          setBanksList(banksData.banks);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        console.warn("Could not load dynamic bank list", err);
       }
-    }
-    fetchBankDetails();
+
+      // Fetch saved user details
+      try {
+        const userRes = await fetch(`${API_BASE}/api/users/bank-details`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const userData = await userRes.json();
+        if (userData.hasBankDetails && userData.bankName && userData.accountNumber) {
+          setBankName(userData.bankName);
+          setAccountNumber(userData.accountNumber);
+          const found = banksList.find(b => b.name.toLowerCase() === userData.bankName.toLowerCase());
+          if (found) setBankCode(found.code);
+        }
+      } catch (err) {
+        console.warn("Could not load saved user bank details", err);
+      }
+    };
+
+    fetchInitialData();
   }, []);
 
-  // Filtered banks for search
-  const filteredBanks = bankSearch
-    ? resolvableBanks.filter(b =>
-        b.name.toLowerCase().includes(bankSearch.toLowerCase())
-      )
-    : resolvableBanks;
+  // 2. Filter banks in modal
+  const filteredBanks = useMemo(() => {
+    if (!searchQuery.trim()) return banksList;
+    const q = searchQuery.toLowerCase();
+    return banksList.filter(b => b.name.toLowerCase().includes(q) || b.code.includes(q));
+  }, [banksList, searchQuery]);
 
-  // Handle selecting a bank from the dropdown
-  const handleBankSelect = (e) => {
-    const selected = banks.find(b => b.name === e.target.value);
-    setBankName(selected.name);
-    setBankCode(selected.code);
-    setBankSearch("");
-    setShowBankDropdown(false);
-  };
-
-  // Open dropdown on input focus
-  const handleBankInputFocus = () => {
-    setShowBankDropdown(true);
-    setBankSearch("");
-  };
-
-  // Allow changing bank after selection
-  const handleChangeBank = () => {
-    setBankName("");
-    setBankCode("");
-    setBankSearch("");
-    setShowBankDropdown(true);
-    setAccountName("");
-    setAccountNumber("");
-    setHasValidated(false);
-  };
-
-  // Validate and resolve bank account (send both code and name)
-  const resolveBankAccount = async (accNum, bankCode, bankName) => {
-    setAccountName("");
-    setBankError("");
-    setHasValidated(false);
-    if (!accNum || accNum.length !== 10 || !bankCode) return;
+  // 3. Resolve Account Logic
+  const resolveAccount = async (accNum, bCode, bName) => {
+    if (!accNum || accNum.length !== 10 || !bCode) return;
+    
     setResolving(true);
+    setBankError("");
+    setAccountName("");
+    setHasValidated(false);
+
     try {
-      const res = await fetch(
-        `${API_BASE}/api/withdraw/bank/resolve?account_number=${accNum}&bank_code=${bankCode}&bank_name=${encodeURIComponent(bankName)}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
+      const token = localStorage.getItem("token");
+      const url = `${API_BASE}/api/withdraw/bank/resolve?account_number=${encodeURIComponent(accNum)}&bank_code=${encodeURIComponent(bCode)}&bank_name=${encodeURIComponent(bName)}`;
+      
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = await res.json();
-      if (res.ok && data.status && data.data && data.data.account_name) {
+
+      if (res.ok && data.status && data.data?.account_name) {
         setAccountName(data.data.account_name);
         setBankError("");
         setHasValidated(true);
       } else {
         setAccountName("");
-        setBankError("Invalid bank details. Please check and try again.");
+        setBankError(data.message || "Could not resolve bank account details.");
         setHasValidated(true);
       }
-    } catch {
+    } catch (err) {
       setAccountName("");
-      setBankError("Unable to verify bank details. Try again later.");
+      setBankError("Network error verifying account. Please check your connection.");
       setHasValidated(true);
+    } finally {
+      setResolving(false);
     }
-    setResolving(false);
   };
 
-  // Watch for account number or bank change
+  // Trigger verification automatically when account reaches 10 digits
   useEffect(() => {
     if (accountNumber.length === 10 && bankCode) {
-      resolveBankAccount(accountNumber, bankCode, bankName);
+      resolveAccount(accountNumber, bankCode, bankName);
     } else {
       setAccountName("");
       setBankError("");
       setHasValidated(false);
     }
-    // eslint-disable-next-line
   }, [accountNumber, bankCode, bankName]);
 
-  // Save bank details to user profile if changed
-  const saveBankDetails = async () => {
+  const handleSelectBank = (bank) => {
+    setBankName(bank.name);
+    setBankCode(bank.code);
+    setIsModalOpen(false);
+    setSearchQuery("");
+  };
+
+  const handleWithdraw = async (e) => {
+    e.preventDefault();
+    if (!amountValid || !accountName || bankError) return;
+
+    setLoading(true);
+    setSuccessMsg("");
+
     try {
-      const res = await fetch(`${API_BASE}/api/users/bank-details`, {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/api/withdraw`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
+          amount: Number(amount),
+          bankCode,
           bankName,
           accountNumber,
-          accountName,
-        }),
+          accountName
+        })
       });
-      // Optionally handle response
-    } catch {
-      // ignore
-    }
-  };
 
-  // Save bank details before withdrawal
-  const handleWithdraw = async (e) => {
-    e.preventDefault();
-    setSuccessMsg("");
-    if (!amountValid) {
-      alert(`Minimum withdrawal is ₦${minWithdraw.toLocaleString()}`);
-      return;
+      const data = await res.json();
+      if (res.ok) {
+        setSuccessMsg("Withdrawal initiated successfully! Payout will arrive within 3 hours.");
+        setTimeout(() => navigate("/dashboard"), 3000);
+      } else {
+        alert(data.message || "Withdrawal failed");
+      }
+    } catch (err) {
+      alert("Network error processing withdrawal.");
+    } finally {
+      setLoading(false);
     }
-    if (!accountName || !!bankError) {
-      setBankError("Please enter valid bank details.");
-      return;
-    }
-    setLoading(true);
-
-    // Save bank details if changed
-    await saveBankDetails();
-
-    const payload = {
-      method: "bank",
-      amount,
-      bankCode,
-      bankName,
-      accountNumber,
-      accountName,
-    };
-    fetch(`${API_BASE}/api/withdraw`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify(payload),
-    })
-      .then(async (res) => {
-        setLoading(false);
-        if (res.ok) {
-          setSuccessMsg("Withdrawal successful! You will receive your money in the next 3hrs.");
-        } else {
-          const data = await res.json();
-          alert(data.message || "Withdrawal failed");
-        }
-      })
-      .catch(() => {
-        setLoading(false);
-        alert("Withdrawal failed. Please try again.");
-      });
   };
 
   return (
-    <main className="min-h-screen pt-24 flex justify-center items-start bg-black text-yellow-400 px-2">
-      <div className="w-full max-w-lg bg-black rounded-3xl p-8 sm:p-12 shadow-2xl border border-yellow-400">
-        <div className="flex flex-col items-center mb-8">
-          <img src="/assets/images/site-logo.png" alt="CirclePay Logo" className="w-16 h-16 rounded-full shadow-lg mb-2 border-2 border-yellow-400" />
-          <h2 className="text-3xl font-extrabold text-yellow-400 mb-1 text-center">Withdraw Funds</h2>
-          <p className="text-yellow-200 text-center text-base">
-            Withdraw your CirclePay earnings directly to your Nigerian bank account.
+    <main className="min-h-screen pt-24 pb-16 px-4 flex justify-center items-start bg-gradient-to-b from-[#0a0d14] via-black to-[#0a0d14] text-yellow-400">
+      <div className="w-full max-w-lg bg-black/70 backdrop-blur-2xl rounded-3xl p-6 sm:p-10 shadow-2xl border border-yellow-400/30">
+        
+        {/* Header */}
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="flex items-center gap-2 text-yellow-400/60 hover:text-yellow-300 transition mb-6 text-sm"
+        >
+          <FaArrowLeft size={12} /> Back to Dashboard
+        </button>
+
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-yellow-400/10 border border-yellow-400/30 mb-4 shadow-lg">
+            <FaUniversity className="text-yellow-400 text-3xl" />
+          </div>
+          <h1 className="text-3xl font-black text-yellow-300">Withdraw Earnings</h1>
+          <p className="text-yellow-200/60 text-sm mt-1">
+            Direct payout to your Nigerian bank account
           </p>
         </div>
-        <div className="mb-6 flex flex-col gap-1 text-center">
-          <div className="text-yellow-400 text-sm">
-            <span className="font-semibold">Maximum withdrawable:</span> ₦{maxAmount.toLocaleString()}
-            <span className="ml-2 text-yellow-300 font-semibold">{formatDollar(maxAmount)}</span>
+
+        {/* Balance Card */}
+        <div className="bg-yellow-400/5 border border-yellow-400/20 rounded-2xl p-4 mb-6 flex justify-between items-center">
+          <div>
+            <p className="text-xs text-yellow-200/50 uppercase tracking-wider">Available to Withdraw</p>
+            <p className="text-2xl font-black text-yellow-300">₦{Number(maxAmount).toLocaleString()}</p>
           </div>
-          <div className="text-yellow-300 text-xs">
-            Minimum withdrawal: ₦{minWithdraw.toLocaleString()} ({formatDollar(minWithdraw)})
+          <div className="text-right">
+            <p className="text-xs text-yellow-200/50">USD Equivalent</p>
+            <p className="text-sm font-semibold text-yellow-400">{formatDollar(maxAmount)}</p>
           </div>
         </div>
+
         {successMsg && (
-          <div className="mb-4 py-3 px-4 rounded-xl bg-emerald-900 text-emerald-300 text-center font-semibold shadow animate-bounce">
-            {successMsg}
+          <div className="mb-6 p-4 rounded-xl bg-emerald-950/80 border border-emerald-500 text-emerald-300 text-sm flex items-center gap-3">
+            <FaCheckCircle className="text-emerald-400 text-xl flex-shrink-0" />
+            <div>{successMsg}</div>
           </div>
         )}
-        <form onSubmit={handleWithdraw} className="flex flex-col gap-5">
+
+        <form onSubmit={handleWithdraw} className="space-y-5">
+          {/* Bank Selection Trigger */}
           <div>
-            <label className="text-yellow-400 font-medium" htmlFor="bankName">
-              Bank Name
+            <label className="block text-xs font-bold text-yellow-300 uppercase tracking-wider mb-2">
+              Select Destination Bank
             </label>
-            <div className="relative mt-2">
-              {!bankName ? (
-                <>
-                  <input
-                    id="bankSearchInput"
-                    type="text"
-                    className="rounded-xl px-3 py-2 border border-yellow-400 mb-2 w-full bg-yellow-900 text-yellow-400"
-                    placeholder="Search bank..."
-                    value={bankSearch}
-                    onChange={e => setBankSearch(e.target.value)}
-                    onFocus={handleBankInputFocus}
-                    autoComplete="off"
-                    readOnly={false}
-                    style={{ cursor: "pointer" }}
-                  />
-                  {showBankDropdown && (
-                    <select
-                      ref={bankDropdownRef}
-                      id="bankName"
-                      className="absolute z-20 left-0 right-0 rounded-xl px-3 py-2 border border-yellow-400 bg-black text-yellow-400 w-full"
-                      value=""
-                      onChange={handleBankSelect}
-                      size={filteredBanks.length > 8 ? 8 : filteredBanks.length}
-                      style={{
-                        minHeight: "44px",
-                        maxHeight: "220px",
-                        overflowY: "auto",
-                        marginBottom: "0.5rem",
-                        top: "44px"
-                      }}
-                    >
-                      {filteredBanks.length === 0 ? (
-                        <option value="">No bank found</option>
-                      ) : (
-                        filteredBanks.map(b => (
-                          <option key={b.name} value={b.name} className="bg-black text-yellow-400">
-                            {b.name}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  )}
-                </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <div className="bg-yellow-900 rounded-xl px-3 py-2 mb-2 w-full flex items-center">
-                    <span className="text-yellow-400 font-semibold">{bankName}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="ml-2 px-2 py-1 rounded bg-yellow-400 text-black text-xs"
-                    onClick={handleChangeBank}
-                  >
-                    Change
-                  </button>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="w-full px-4 py-3.5 rounded-xl border border-yellow-400/40 bg-black/60 text-left flex items-center justify-between hover:border-yellow-400 transition"
+            >
+              <div className="flex items-center gap-3">
+                <FaUniversity className="text-yellow-400" />
+                <span className={bankName ? "text-yellow-200 font-semibold" : "text-yellow-200/40"}>
+                  {bankName || "Choose your bank..."}
+                </span>
+              </div>
+              <span className="text-xs text-yellow-400/70 border border-yellow-400/30 px-2.5 py-1 rounded-md">
+                Change
+              </span>
+            </button>
+          </div>
+
+          {/* Account Number */}
+          <div>
+            <label className="block text-xs font-bold text-yellow-300 uppercase tracking-wider mb-2">
+              10-Digit NUBAN Account Number
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                maxLength={10}
+                placeholder="0123456789"
+                value={accountNumber}
+                onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+                className={`w-full px-4 py-3.5 rounded-xl bg-black/60 border text-yellow-200 placeholder-yellow-200/20 font-mono text-lg tracking-wider focus:outline-none transition ${
+                  hasValidated
+                    ? accountName
+                      ? "border-emerald-500 focus:border-emerald-400"
+                      : "border-rose-500 focus:border-rose-400"
+                    : "border-yellow-400/40 focus:border-yellow-400"
+                }`}
+                disabled={loading}
+                required
+              />
+
+              {resolving && (
+                <div className="absolute right-4 top-4 flex items-center gap-2 text-xs text-yellow-400 animate-pulse">
+                  <div className="w-3.5 h-3.5 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                  Verifying...
                 </div>
               )}
             </div>
-          </div>
-          <div>
-            <label className="text-yellow-400 font-medium" htmlFor="accountNumber">
-              Account Number
-            </label>
-            <input
-              id="accountNumber"
-              type="text"
-              maxLength={10}
-              className={`rounded-xl px-3 py-2 border w-full bg-yellow-900 text-yellow-400 ${
-                hasValidated
-                  ? accountName
-                    ? "border-emerald-400"
-                    : "border-rose-400"
-                  : "border-yellow-400"
-              }`}
-              placeholder="Enter your account number"
-              value={accountNumber}
-              onChange={e => setAccountNumber(e.target.value.replace(/\D/, ""))}
-              disabled={loading}
-              required
-            />
-            {resolving && (
-              <div className="flex items-center gap-2 text-yellow-300 text-xs mt-1">
-                <span className="animate-spin inline-block w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full"></span>
-                Validating account...
+
+            {/* Verification Result */}
+            {hasValidated && accountName && (
+              <div className="mt-2 p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center gap-2.5">
+                <FaCheckCircle className="text-emerald-400 flex-shrink-0" />
+                <span className="text-xs text-emerald-300 font-bold uppercase tracking-wider">
+                  {accountName}
+                </span>
               </div>
             )}
-            {hasValidated && accountName && !bankError && (
-              <div className="text-emerald-400 text-xs mt-1">
-                <span className="font-semibold">Account Name:</span> {accountName}
-              </div>
-            )}
+
             {hasValidated && bankError && (
-              <div className="text-rose-400 text-xs mt-1">{bankError}</div>
+              <div className="mt-2 p-3 rounded-xl bg-rose-950/40 border border-rose-500/40 flex items-center gap-2.5 text-xs text-rose-300">
+                <FaExclamationCircle className="text-rose-400 flex-shrink-0" />
+                {bankError}
+              </div>
             )}
           </div>
+
+          {/* Amount */}
           <div>
-            <label className="text-yellow-400 font-medium" htmlFor="amount">
-              Amount (₦)
+            <label className="block text-xs font-bold text-yellow-300 uppercase tracking-wider mb-2">
+              Withdrawal Amount (₦)
             </label>
             <input
-              id="amount"
               type="number"
               min={minWithdraw}
               max={maxAmount}
-              step="1"
-              className="rounded-xl px-3 py-2 border border-yellow-400 w-full bg-yellow-900 text-yellow-400"
-              placeholder={`Enter amount (min ₦${minWithdraw.toLocaleString()})`}
+              placeholder={`Min ₦${minWithdraw.toLocaleString()}`}
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full px-4 py-3.5 rounded-xl bg-black/60 border border-yellow-400/40 text-yellow-200 placeholder-yellow-200/20 text-lg font-semibold focus:outline-none focus:border-yellow-400"
               disabled={loading}
               required
             />
-            <div className="text-xs text-yellow-300 mb-2 text-center">
-              {amount
-                ? <>You will withdraw <span className="font-semibold text-yellow-400">₦{Number(amount).toLocaleString()}</span> <span className="ml-1 text-yellow-300 font-semibold">{formatDollar(Number(amount))}</span></>
-                : null}
-            </div>
+            <p className="text-xs text-yellow-200/40 mt-1">
+              Minimum: ₦{minWithdraw.toLocaleString()} ({formatDollar(minWithdraw)})
+            </p>
           </div>
+
+          {/* Submit */}
           <button
             type="submit"
-            className="mt-2 px-4 py-2 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-black font-semibold text-lg shadow transition disabled:opacity-60 disabled:cursor-not-allowed"
-            disabled={
-              loading ||
-              !accountName ||
-              !!bankError ||
-              !canWithdraw ||
-              !amountValid
-            }
+            disabled={loading || !amountValid || !accountName || !!bankError}
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-black text-lg shadow-xl hover:shadow-yellow-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {loading ? "Processing..." : "Withdraw"}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                Processing...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <FaShieldAlt /> Confirm & Withdraw
+              </span>
+            )}
           </button>
-          {(!canWithdraw || !amountValid) && (
-            <div className="text-rose-400 text-sm mt-2 text-center">
-              Minimum withdrawal is ₦{minWithdraw.toLocaleString()} ({formatDollar(minWithdraw)}).
-            </div>
-          )}
         </form>
-        <div className="mt-8 text-center text-yellow-400 text-sm">
-          Withdrawals are processed securely to your bank account.<br />
-          <span className="text-yellow-300 font-semibold">You will receive your money in the next 3hrs after withdrawal.</span>
-        </div>
-        <div className="mt-6 text-center text-xs text-yellow-700">
-          Powered by <span className="font-bold text-yellow-400">CirclePay</span>
-        </div>
+
+        <p className="text-center text-xs text-yellow-200/40 mt-6 flex items-center justify-center gap-1.5">
+          <FaBolt className="text-yellow-400" /> Automatic payouts verified via Paystack NUBAN API
+        </p>
       </div>
-      <style>{`
-        @media (max-width: 640px) {
-          main {
-            padding-top: 2.5rem !important;
-          }
-          .max-w-lg {
-            padding: 2rem !important;
-          }
-        }
-        select, option {
-          background: #000 !important;
-          color: #FFD700 !important;
-        }
-      `}</style>
+
+      {/* Premium Bank Selection Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0e121a] border border-yellow-400/40 rounded-3xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-yellow-400/20 flex justify-between items-center">
+              <h2 className="text-xl font-black text-yellow-300 flex items-center gap-2">
+                <FaUniversity /> Select Your Bank
+              </h2>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-yellow-400/10 hover:bg-yellow-400/20 text-yellow-300 flex items-center justify-center transition"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            {/* Quick Select Chips */}
+            <div className="p-4 border-b border-yellow-400/10">
+              <p className="text-xs font-semibold text-yellow-200/50 mb-2.5">POPULAR</p>
+              <div className="flex flex-wrap gap-2">
+                {banksList
+                  .filter(b => POPULAR_BANK_CODES.includes(b.code))
+                  .map(b => (
+                    <button
+                      key={b.code}
+                      onClick={() => handleSelectBank(b)}
+                      className="px-3 py-1.5 rounded-lg bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/30 text-yellow-300 text-xs font-bold transition"
+                    >
+                      {b.name.split(" ")[0]}
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Search Box */}
+            <div className="p-4 pb-2">
+              <div className="relative">
+                <FaSearch className="absolute left-3.5 top-3.5 text-yellow-400/50" />
+                <input
+                  type="text"
+                  placeholder="Search bank name or code..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/60 border border-yellow-400/30 text-yellow-200 text-sm placeholder-yellow-200/30 focus:outline-none focus:border-yellow-400"
+                />
+              </div>
+            </div>
+
+            {/* Bank Items List */}
+            <div className="overflow-y-auto flex-1 p-4 pt-2 space-y-1">
+              {filteredBanks.length === 0 ? (
+                <div className="text-center py-10 text-yellow-200/40 text-sm">
+                  No bank found matching "{searchQuery}"
+                </div>
+              ) : (
+                filteredBanks.map(b => (
+                  <button
+                    key={b.code + b.name}
+                    onClick={() => handleSelectBank(b)}
+                    className="w-full text-left p-3 rounded-xl hover:bg-yellow-400/10 transition flex items-center justify-between group border border-transparent hover:border-yellow-400/20"
+                  >
+                    <span className="text-yellow-200 text-sm font-medium group-hover:text-yellow-300">
+                      {b.name}
+                    </span>
+                    <span className="text-xs font-mono text-yellow-200/40 group-hover:text-yellow-400">
+                      {b.code}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
     </main>
   );
 }

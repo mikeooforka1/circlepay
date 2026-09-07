@@ -9,6 +9,7 @@ import {
 import React, { useState, useEffect } from "react";
 import { Analytics } from "@vercel/analytics/react";
 
+import SuperAdmin from "./pages/dashboard/SuperAdmin";
 import Home from "./pages/Home.jsx";
 import Sectors from "./pages/sectors.jsx";
 import About from "./pages/About.jsx";
@@ -100,6 +101,7 @@ const showFooter = !hideFooterRoutes.some(route =>
   <main className="flex-1">
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/dashboard/super-admin" element={<SuperAdmin />} />
       <Route path="/sectors" element={<Sectors />} />
       <Route path="/about" element={<About />} />
       <Route path="/dashboard" element={<Dashboard />} />

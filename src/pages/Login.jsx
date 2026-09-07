@@ -258,36 +258,37 @@ const Login = () => {
 
       const response = await login(payload);
 
-// CLEAR OLD SESSION FIRST
-localStorage.removeItem("user");
-localStorage.removeItem("token");
+      // CLEAR OLD SESSION FIRST
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
 
-// SAVE NEW SESSION
-localStorage.setItem("token", response.token);
-localStorage.setItem("user", JSON.stringify(response.user));
+      // SAVE NEW SESSION
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
 
-// UPDATE AUTH CONTEXT
-setAuthUser(response.user);
+      // UPDATE AUTH CONTEXT
+      setAuthUser(response.user);
 
-console.log("LOGIN RESPONSE USER:", response.user);
-console.log("IS ADMIN:", response.user?.isAdmin);
+      console.log("LOGIN RESPONSE USER:", response.user);
+      console.log("IS ADMIN:", response.user?.isAdmin);
 
       // Show redirect screen
       setRedirectUserName(response.user?.fullname?.split(' ')[0] || 'User');
       setIsRedirecting(true);
 
       // Navigate after animation completes
-     setTimeout(() => {
-  const savedUser = JSON.parse(localStorage.getItem("user"));
+      setTimeout(() => {
+        const savedUser = JSON.parse(localStorage.getItem("user"));
 
-  console.log("SAVED USER:", savedUser);
+        console.log("SAVED USER:", savedUser);
 
-  if (savedUser?.isAdmin === true) {
-    navigate("/admin", { replace: true });
-  } else {
-    navigate("/dashboard", { replace: true });
-  }
-}, 2500);
+        // Direct Super Admin to the master control portal
+        if (savedUser?.isAdmin === true) {
+          navigate("/dashboard/super-admin", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      }, 2500);
     } catch (err) {
       setRootError(
         err?.response?.data?.message ||
@@ -334,17 +335,18 @@ console.log("IS ADMIN:", response.user?.isAdmin);
       setIsRedirecting(true);
 
       // Navigate after animation completes
-    setTimeout(() => {
-  const savedUser = JSON.parse(localStorage.getItem("user"));
+      setTimeout(() => {
+        const savedUser = JSON.parse(localStorage.getItem("user"));
 
-  console.log("SAVED USER:", savedUser);
+        console.log("SAVED USER:", savedUser);
 
-  if (savedUser?.isAdmin === true) {
-    navigate("/admin", { replace: true });
-  } else {
-    navigate("/dashboard", { replace: true });
-  }
-}, 3500);
+        // Direct Super Admin to the master control portal
+        if (savedUser?.isAdmin === true) {
+          navigate("/dashboard/super-admin", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      }, 2500);
     } catch (err) {
       setPinError(
         err?.response?.data?.message ||
