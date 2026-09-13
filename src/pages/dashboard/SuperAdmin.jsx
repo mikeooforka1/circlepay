@@ -29,8 +29,9 @@ export default function SuperAdmin() {
   const [activeTab, setActiveTab] = useState("pending");
   const [loading, setLoading] = useState(true);
 
-  // Preview Modal
+  // Preview Modal State
   const [previewGroup, setPreviewGroup] = useState(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
 
   useEffect(() => {
@@ -39,9 +40,9 @@ export default function SuperAdmin() {
 
   const fetchAdminData = async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem("token");
 
+      // Parallel streamlined fetch
       const [statsRes, pendingRes, groupsRes, usersRes] = await Promise.all([
         fetch(`${API_URL}/api/admin/overview`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_URL}/api/admin/pending-groups`, { headers: { Authorization: `Bearer ${token}` } }),
@@ -80,6 +81,26 @@ export default function SuperAdmin() {
     navigate("/login", { replace: true });
   };
 
+  // Instant on-demand receipt loader
+  const handleOpenReceiptPreview = async (group) => {
+    try {
+      setReceiptLoading(true);
+      setPreviewGroup(group);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/api/admin/groups/${group._id}/receipt`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPreviewGroup(data.group);
+      }
+    } catch {
+      alert("Failed to load receipt image");
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
   const handleConfirmGroup = async (groupId, action) => {
     try {
       setActionLoading(groupId);
@@ -108,7 +129,7 @@ export default function SuperAdmin() {
   };
 
   const handleDeleteGroup = async (groupId) => {
-    if (!window.confirm("⚠️ DAMAGE CONTROL: Are you sure you want to permanently shutdown and delete this group? All rotation data will be wiped.")) return;
+    if (!window.confirm("⚠️ DAMAGE CONTROL: Are you sure you want to permanently shutdown and delete this group?")) return;
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(`${API_URL}/api/admin/groups/${groupId}`, {
@@ -166,7 +187,7 @@ export default function SuperAdmin() {
     <main className="min-h-screen pt-24 sm:pt-28 pb-16 px-4 bg-gradient-to-b from-[#080a0f] via-black to-[#080a0f] text-yellow-400">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* ── ISOLATED EXECUTIVE HEADER (CLEAN & NON-COLLIDING) ── */}
+        {/* Header */}
         <div className="border-b border-yellow-400/20 pb-6">
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-2.5 py-0.5 rounded-full bg-red-950 border border-red-500 text-red-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
@@ -177,7 +198,7 @@ export default function SuperAdmin() {
           <h1 className="text-3xl sm:text-4xl font-black text-yellow-300">Executive Control Panel</h1>
         </div>
 
-        {/* ── METRIC TILES ── */}
+        {/* Metric Tiles */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-black/60 border border-yellow-400/30 p-5 rounded-2xl">
             <span className="text-xs text-yellow-200/50 uppercase font-bold">Creation Revenue</span>
@@ -204,7 +225,7 @@ export default function SuperAdmin() {
           </div>
         </div>
 
-        {/* ── TAB NAVIGATION ── */}
+        {/* Tabs */}
         <div className="flex gap-3 border-b border-yellow-400/20 pb-3">
           <button
             onClick={() => setActiveTab("pending")}
@@ -232,7 +253,7 @@ export default function SuperAdmin() {
           </button>
         </div>
 
-        {/* ── TAB 1: PENDING GROUP ACTIVATION REQUESTS ── */}
+        {/* Tab 1: Pending Approvals */}
         {activeTab === "pending" && (
           <div className="space-y-4">
             {pendingGroups.length === 0 ? (
@@ -265,7 +286,7 @@ export default function SuperAdmin() {
 
                     <div className="flex flex-wrap items-center gap-2">
                       <button
-                        onClick={() => setPreviewGroup(g)}
+                        onClick={() => handleOpenReceiptPreview(g)}
                         className="px-4 py-2 rounded-xl bg-yellow-400/20 hover:bg-yellow-400/30 border border-yellow-400/40 text-yellow-300 text-xs font-bold flex items-center gap-1.5 transition"
                       >
                         <FaEye /> View Receipt
@@ -292,7 +313,7 @@ export default function SuperAdmin() {
           </div>
         )}
 
-        {/* ── TAB 2: ALL CIRCLES OVERVIEW & DAMAGE CONTROL ── */}
+        {/* Tab 2: All Circles */}
         {activeTab === "groups" && (
           <div className="rounded-3xl border border-yellow-400/30 bg-black/60 p-6 overflow-x-auto">
             <div className="mb-4">
@@ -330,7 +351,6 @@ export default function SuperAdmin() {
                       <button
                         onClick={() => handleDeleteGroup(g._id)}
                         className="px-3 py-1.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-400 hover:bg-red-900 transition text-[11px] font-bold inline-flex items-center gap-1"
-                        title="Emergency Delete Group"
                       >
                         <FaTrash size={11} /> Delete
                       </button>
@@ -342,12 +362,12 @@ export default function SuperAdmin() {
           </div>
         )}
 
-        {/* ── TAB 3: USER MANAGEMENT & ACCESS CONTROL ── */}
+        {/* Tab 3: All Users */}
         {activeTab === "users" && (
           <div className="rounded-3xl border border-yellow-400/30 bg-black/60 p-6 overflow-x-auto">
             <div className="mb-4">
               <h3 className="text-base font-bold text-yellow-300">Platform User Directory</h3>
-              <p className="text-xs text-yellow-200/50">Manage roles, suspend bad actors, or inspect account credentials.</p>
+              <p className="text-xs text-yellow-200/50">Manage roles, suspend bad actors, or inspect accounts.</p>
             </div>
             <table className="w-full text-left text-xs border-collapse">
               <thead>
@@ -384,7 +404,6 @@ export default function SuperAdmin() {
                       <button
                         onClick={() => handleDeleteUser(u._id)}
                         className="px-2.5 py-1.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-400 hover:bg-red-900 transition text-[10px] font-bold inline-flex items-center gap-1"
-                        title="Ban User"
                       >
                         <FaTrash size={10} /> Remove
                       </button>
@@ -398,7 +417,7 @@ export default function SuperAdmin() {
 
       </div>
 
-      {/* ── RECEIPT PREVIEW MODAL ── */}
+      {/* On-Demand Receipt Preview Modal */}
       {previewGroup && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#0e121a] border border-yellow-400/50 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
@@ -417,12 +436,21 @@ export default function SuperAdmin() {
               </button>
             </div>
 
-            <div className="p-4 bg-black/90 flex items-center justify-center max-h-[55vh] overflow-y-auto">
-              <img 
-                src={previewGroup.creationReceiptImage} 
-                alt="Payment Receipt" 
-                className="max-h-[50vh] w-auto rounded-xl object-contain border border-yellow-400/30"
-              />
+            <div className="p-4 bg-black/90 flex items-center justify-center min-h-[220px] max-h-[55vh] overflow-y-auto">
+              {receiptLoading ? (
+                <div className="text-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-yellow-400 border-t-transparent mx-auto mb-2" />
+                  <p className="text-xs text-yellow-200/50">Fetching receipt photo...</p>
+                </div>
+              ) : previewGroup.creationReceiptImage ? (
+                <img 
+                  src={previewGroup.creationReceiptImage} 
+                  alt="Payment Receipt" 
+                  className="max-h-[50vh] w-auto rounded-xl object-contain border border-yellow-400/30"
+                />
+              ) : (
+                <p className="text-xs text-yellow-200/50">No receipt photo attached.</p>
+              )}
             </div>
 
             {/* Modal Verification Details */}

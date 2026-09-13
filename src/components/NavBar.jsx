@@ -14,13 +14,6 @@ const CloseIcon = ({ size = 22 }) => (
   </svg>
 );
 
-const links = [
-  { to: "/", label: "Home" },
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/about", label: "About" },
-  { to: "/contact", label: "Contact" },
-];
-
 const DEFAULT_AVATAR = "/assets/images/default-avatar.png";
 
 export default function NavBar() {
@@ -31,26 +24,44 @@ export default function NavBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const isAdmin = user?.isAdmin === true || storedUser?.isAdmin === true;
+
   const avatar =
     user?.avatar_url ||
-    JSON.parse(localStorage.getItem("user") || "{}")?.avatar_url ||
+    storedUser?.avatar_url ||
     DEFAULT_AVATAR;
 
+  // Seamless dynamic navigation links depending on role
+  const navLinks = isAdmin
+    ? [
+        { to: "/", label: "Home" },
+        { to: "/dashboard/super-admin", label: "Admin Portal", isAdminBadge: true },
+        { to: "/about", label: "About" },
+        { to: "/contact", label: "Contact" },
+      ]
+    : [
+        { to: "/", label: "Home" },
+        { to: "/dashboard", label: "Dashboard" },
+        { to: "/about", label: "About" },
+        { to: "/contact", label: "Contact" },
+      ];
+
   const confirmLogout = () => {
-  setLoggingOut(true);
+    setLoggingOut(true);
 
-  setTimeout(() => {
-    logout();
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    setTimeout(() => {
+      logout();
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
 
-    setShowLogoutModal(false);
-    setOpen(false);
+      setShowLogoutModal(false);
+      setOpen(false);
 
-    setLoggingOut(false);
-    navigate("/login");
-  }, 1000);
-};
+      setLoggingOut(false);
+      navigate("/login");
+    }, 1000);
+  };
 
   return (
     <>
@@ -58,33 +69,44 @@ export default function NavBar() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mt-4 rounded-2xl border border-yellow-400 bg-black/90 shadow-lg backdrop-blur-xl">
             <div className="flex items-center justify-between px-4 py-3">
-              <Link to="/" className="flex items-center gap-3">
+              <Link to={isAdmin ? "/dashboard/super-admin" : "/"} className="flex items-center gap-3">
                 <img
                   src="/assets/images/site-logo.png"
                   alt="CirclePay logo"
                   className="h-8 w-8 rounded-full ring-1 ring-yellow-400/30"
                 />
-                <span className="text-lg font-extrabold tracking-tight">
+                <span className="text-lg font-extrabold tracking-tight flex items-center gap-1.5">
                   <span className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-300 bg-clip-text text-transparent">
                     Circle
                   </span>
-                  <span className="ml-1 bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">
                     Pay
                   </span>
+                  {isAdmin && (
+                    <span className="ml-1.5 px-2 py-0.5 rounded-md bg-red-950/80 border border-red-500/60 text-red-400 text-[10px] font-black uppercase tracking-wider">
+                      Admin
+                    </span>
+                  )}
                 </span>
               </Link>
 
               <nav className="hidden md:flex items-center gap-6">
-                {links.map((l) => (
+                {navLinks.map((l) => (
                   <NavLink
                     key={l.to}
                     to={l.to}
                     className={({ isActive }) =>
-                      `text-sm transition-colors font-semibold ${
-                        isActive
-                          ? "text-yellow-400"
-                          : "text-yellow-200 hover:text-yellow-400"
-                      }`
+                      l.isAdminBadge
+                        ? `text-xs px-3 py-1.5 rounded-xl font-black uppercase tracking-wider transition ${
+                            isActive
+                              ? "bg-yellow-400 text-black shadow-md"
+                              : "bg-yellow-400/20 text-yellow-300 border border-yellow-400/40 hover:bg-yellow-400/30"
+                          }`
+                        : `text-sm transition-colors font-semibold ${
+                            isActive
+                              ? "text-yellow-400"
+                              : "text-yellow-200 hover:text-yellow-400"
+                          }`
                     }
                   >
                     {l.label}
@@ -102,13 +124,15 @@ export default function NavBar() {
 
                 {user && (
                   <div className="flex items-center gap-3">
-                    <Link to="/profile">
-                      <img
-                        src={avatar}
-                        alt="profile"
-                        className="w-11 h-11 rounded-full object-cover border-2 border-yellow-400 shadow-lg hover:scale-105 transition"
-                      />
-                    </Link>
+                    {!isAdmin && (
+                      <Link to="/profile">
+                        <img
+                          src={avatar}
+                          alt="profile"
+                          className="w-11 h-11 rounded-full object-cover border-2 border-yellow-400 shadow-lg hover:scale-105 transition"
+                        />
+                      </Link>
+                    )}
 
                     <button
                       onClick={() => setShowLogoutModal(true)}
@@ -121,7 +145,7 @@ export default function NavBar() {
               </nav>
 
               <div className="flex items-center gap-2 md:hidden">
-                {user && (
+                {user && !isAdmin && (
                   <Link
                     to="/profile"
                     onClick={() => setOpen(false)}
@@ -146,17 +170,23 @@ export default function NavBar() {
             {open && (
               <div className="md:hidden border-t border-yellow-400 px-4 pb-4 bg-black/95 rounded-b-2xl">
                 <div className="flex flex-col gap-2 pt-2">
-                  {links.map((l) => (
+                  {navLinks.map((l) => (
                     <NavLink
                       key={l.to}
                       to={l.to}
                       onClick={() => setOpen(false)}
                       className={({ isActive }) =>
-                        `rounded-xl px-3 py-2 text-sm font-semibold ${
-                          isActive
-                            ? "bg-yellow-900 text-yellow-400"
-                            : "text-yellow-200 hover:bg-yellow-900"
-                        }`
+                        l.isAdminBadge
+                          ? `rounded-xl px-3 py-2 text-xs font-black uppercase tracking-wider ${
+                              isActive
+                                ? "bg-yellow-400 text-black"
+                                : "bg-yellow-400/20 text-yellow-300 border border-yellow-400/30"
+                            }`
+                          : `rounded-xl px-3 py-2 text-sm font-semibold ${
+                              isActive
+                                ? "bg-yellow-900 text-yellow-400"
+                                : "text-yellow-200 hover:bg-yellow-900"
+                            }`
                       }
                     >
                       {l.label}
@@ -166,7 +196,7 @@ export default function NavBar() {
                   {user && (
                     <button
                       onClick={() => setShowLogoutModal(true)}
-                      className="rounded-xl px-3 py-2 bg-yellow-700 text-white"
+                      className="rounded-xl px-3 py-2 bg-yellow-700 text-white font-semibold text-sm text-left"
                     >
                       Logout
                     </button>
@@ -192,14 +222,14 @@ export default function NavBar() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowLogoutModal(false)}
-                className="flex-1 py-2 rounded-xl bg-gray-700 text-white"
+                className="flex-1 py-2 rounded-xl bg-gray-700 text-white font-semibold"
               >
                 Cancel
               </button>
 
               <button
                 onClick={confirmLogout}
-                className="flex-1 py-2 rounded-xl bg-red-600 text-white"
+                className="flex-1 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition"
               >
                 Yes Logout
               </button>
