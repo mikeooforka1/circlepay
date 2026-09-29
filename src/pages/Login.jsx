@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = process.env.REACT_APP_API_URL ||
 
 async function login(payload) {
   const res = await fetch(`${API_URL}/api/auth/login`, {
