@@ -12,7 +12,7 @@ import {
 } from "react-icons/fa";
 
 const NGN_TO_USD = 1461.66;
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = process.env.REACT_APP_API_URL || "";
 
 const DEFAULT_BANKS = [
   { name: "Access Bank", code: "044" },

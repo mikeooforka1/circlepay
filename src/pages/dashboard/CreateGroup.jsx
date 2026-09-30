@@ -14,7 +14,7 @@ import {
   FaCopy 
 } from "react-icons/fa";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = process.env.REACT_APP_API_URL || "";
 const FEE_PER_HEAD = 350;
 
 // FIXED PLATFORM OWNER (SUPER ADMIN) ACCOUNT

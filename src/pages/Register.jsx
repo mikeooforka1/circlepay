@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { FaEye, FaEyeSlash, FaCheckCircle, FaArrowRight } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
 
-const API_URL = process.env.REACT_APP_API_URL || 
+const API_URL = process.env.REACT_APP_API_URL || "";
 
 async function registerUser(payload) {
   const res = await fetch(`${API_URL}/api/auth/register`, {
